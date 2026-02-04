@@ -11,4 +11,4 @@ COPY . /app
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Default command (change train.py if needed)
-CMD ["python", "-u", "log_scaling_prices.py"]
+CMD ["python", "-u", "train.py"]
