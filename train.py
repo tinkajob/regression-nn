@@ -1,22 +1,31 @@
+# This is a version of normal evolution with log-scaled prices, and gradually descending mutation strength, and Leaky ReLU
+
 import pandas, random
+import numpy as np
 from utils.utils import *
 from modules.normalizer import Normalizer
 from modules.network import Network
 
-parameters = load_json("train/training_parameters.json")
+parameters = load_json(os.path.join("training_parameters.json"))
 
 population_size = parameters["population_size"]
 survivors_count = parameters["survivors_count"]
+max_generations = parameters["max_generations"]
+
+# Pass them into function for mutating!
+new_layer_rate = parameters["new_layer_rate"]
+delete_layer_rate = parameters["delete_layer_rate"]
+new_neuron_rate = parameters["new_neuron_rate"]
+delete_neuron_rate = parameters["delete_neuron_rate"]
 
 features = parameters["features"]
 target = parameters["target"]
-
-max_generations = parameters["max_generations"]
-
 patience = parameters["patience"]
+sort_key = parameters["sort_key"] # 1 - log-scaled MAE, 2 - raw dollars MAE
 
 mutation_rate = parameters["mutation_rate"]
 mutation_strength = parameters["mutation_strength"]
+mutation_strength_decay = parameters["mutation_strength_decay"]
 
 norm = Normalizer()
 
@@ -29,15 +38,16 @@ training_data = df[:3200]
 validation_data = df[3200:]
 
 # We 'configure' normalizer only on training set, not on test set, and use only this configuration to normalize BOTH subsets (so that they are normalized in the same way)
-norm.fit(df[:3200], features + target) 
-training_data = norm.transform(training_data, features + target)
-validation_data = norm.transform(validation_data, features + target)
+# We don't normalize the price as we use log-scaling!
+norm.fit(df[:3200], features) 
+training_data = norm.transform(training_data, features)
+validation_data = norm.transform(validation_data, features)
 
 # This are lists of tuples: ([a, b, c, d, e, f], g)
-training_dataset = [(row[features].values.tolist(), row[target[0]]) for _, row in training_data.iterrows()]
-validation_dataset = [(row[features].values.tolist(), row[target[0]]) for _, row in validation_data.iterrows()]
+training_dataset = [(row[features].values.tolist(), np.log1p(row[target[0]])) for _, row in training_data.iterrows()]
+validation_dataset = [(row[features].values.tolist(), np.log1p(row[target[0]])) for _, row in validation_data.iterrows()]
 
-network_size = [len(features), 25, 1]
+network_size = [len(features), 32, 16, 1]
 population = [Network(network_size) for _ in range(population_size)]
 
 best_model_score = 99999999999
@@ -51,17 +61,19 @@ for generation in range(1, max_generations + 1):
     gen_performance = []
     for child in population:
         # This mae should be as low as possible
-        norm_mae = child.evaluate(training_dataset)
-        gen_performance.append((child, norm_mae))
+        log_mae, raw_mae = child.evaluate(training_dataset, uses_log_scaling = True)
+        gen_performance.append((child, log_mae, raw_mae))
 
-    # After we have finished training a generation, we sort networks by their performance, and pick top n survivors
-    gen_performance.sort(key = lambda x:x[1])
+    # After we have finished training a generation, we sort networks by their performance
+    gen_performance.sort(key = lambda x:x[sort_key])
     last_gen = generation
 
     # To keep track of the best model so far
-    if gen_performance[0][1] < best_model_score:
+    if gen_performance[0][sort_key] < best_model_score:
         best_model = gen_performance[0][0]
-        best_model_score = gen_performance[0][1]
+        best_model_score = gen_performance[0][sort_key]
+        log_scaled_mae = gen_performance[0][1]
+        dollar_mae = gen_performance[0][2]
         gens_without_improvement = 0
     else:
         gens_without_improvement += 1
@@ -69,35 +81,39 @@ for generation in range(1, max_generations + 1):
             print("MODEL EXCEEDED PATIENCE MAXIMUM!\nSTOPPING NOW")
             break
 
-    best_mae = gen_performance[0][1]
 
     print(f"COMPLETED TRAINING GENERATION: {generation}")
-    print(f"    - Best MAE (normalized): {best_mae}")
-    print(f"    - Best MAE (dollars): {norm.invert_value(best_mae, "price"):,.2f}")
+    print(f"    - Best MAE (dollars): {dollar_mae:,.2f}")
+    print(f"    - Best MAE (log-scaled): {log_scaled_mae:,.10f}")
     print(f"    - Patience used: {gens_without_improvement}\n")
 
-    survivors = [network for network, mae in gen_performance[:survivors_count]]
+    survivors = [network for network, log_mae, raw_mae in gen_performance[:survivors_count]]
 
     # The non-survivors will be ovverwritten by copies of new mutations of survivors
-    remaining = [network for network, mae in gen_performance[survivors_count:]]
+    remaining = [network for network, log_mae, raw_mae in gen_performance[survivors_count:]]
 
     for child in remaining:
         parent = random.choice(survivors)
-        genes = parent.get_genes()
-        mutated_genes = child.mutate_genes(genes, mutation_rate = mutation_rate, mutation_strength = mutation_strength)
-        child.set_genes(mutated_genes)
-
+        child.set_genes(parent.get_genes())                                                                             
+        child.mutate_genes(current_gen=generation, mutation_rate = mutation_rate, mutation_strength = mutation_strength * (mutation_strength_decay ** generation), new_layer_rate=new_layer_rate, delete_layer_rate=delete_layer_rate)
+    
     population = survivors + remaining
 
 print("================================\n      VALIDATING MODEL\n================================\n")
-validation_mae = best_model.evaluate(validation_dataset)
-print(f"Model's performance: {validation_mae} (normalized MAE)")
-print(f"Model's performance: {norm.invert_value(validation_mae, "price"):,.2f} (MAE in dollars)")
+validation_mae, raw_validation_mae = best_model.evaluate(validation_dataset, uses_log_scaling = True)
+print(f"MODEL'S PERFORMANCE:")
+print(f"    - Dollars MAE: {raw_validation_mae:,.2f}")
+print(f"    - Log-scaled MAE: {validation_mae:,.10f}")
 
 best_model_genes = best_model.get_genes()
 metrics = {
     "timestamp": datetime.now().isoformat(timespec="seconds").replace(":", "-"), 
     "generation": last_gen,
-    "MAE": validation_mae
+    "MAE": validation_mae,
+    "layer_sizes": best_model.get_layer_sizes(),
+    "normalization": {
+        "means": norm.means,
+        "stds": norm.stds
+    }
 }
 save_model(best_model_genes, metrics, parameters, input("How would you like to name this model? (leave empty for default)\n: "))

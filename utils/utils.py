@@ -1,5 +1,7 @@
 import json, os
+from modules.normalizer import Normalizer
 from datetime import datetime
+from pathlib import Path
 
 def load_json(path):
     with open(path) as file:
@@ -21,3 +23,44 @@ def save_model(genes, metrics, parameters, name = "", base_dir = "models"):
 
     with open(os.path.join(model_dir, "parameters.json"), "w") as f:
         json.dump(parameters, f)
+
+def get_folders(path):
+    """Lists all folders in given directory."""
+    folders = []
+    for p in Path(path).iterdir():
+        if p.is_dir():
+            folders.append(p.name)
+    return sorted(folders)
+
+def normalize_input(values:dict, features:list, norm:Normalizer):
+    """
+    Normalizes a list of raw feature values using the provided Normalizer.
+
+    Parameters:
+    - values: list of raw input values, e.g. [3, 2, 2560, ...]
+    - features: list of feature names, same order as the model expects
+    - norm: Normalizer object that has means and stds
+
+    Returns:
+    - List of normalized values, ready for model prediction
+    """
+    if len(values) != len(features):
+        print("ERROR: Lengths of values and features don't match!")
+        return []
+
+    normalized = []
+    for feature in features:
+        if feature not in values:
+            print(f"ERROR: feature '{feature}' not in values!")
+            normalized.append(0.0)  # fallback to 0 if missing
+            continue
+        mean = norm.means[feature]
+        std = norm.stds[feature]
+
+        if std == 0:
+            normalized_value = 0.0
+        else:
+            normalized_value = (values[feature] - mean) / std
+
+        normalized.append(normalized_value)
+    return normalized

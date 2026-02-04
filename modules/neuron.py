@@ -1,13 +1,20 @@
 class Neuron:
-    def __init__(self, weights:list, bias:float, activation):
-        self.weights = weights
+    id_counter = 0
+
+    def __init__(self, bias:float, activation, weights = None):
+        # Each neuron gets it's own unique id
+        self.id = Neuron.id_counter
+        Neuron.id_counter += 1
+        
+        self.weights = {} if weights is None else dict(weights)
         self.bias = bias
-        self.activation = activation #should be lambda x: max(0, x) for hidden layers and lambda x: x
+        self.activation = activation if activation else (lambda x: x) # Should be lambda x: max(0, x) for hidden layers and lambda x: x
 
-    def forward(self, inputs:list):
-        sum = 0
-        for weight, input in zip(self.weights, inputs):
-            sum += weight * input
+    def forward(self, inputs_by_id):
+        s = self.bias
+        for input_id, w in self.weights.items():
+            s += w * inputs_by_id.get(input_id, 0.0)
+        return self.activation(s)
 
-        sum += self.bias
-        return self.activation(sum)
+
+
