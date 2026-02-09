@@ -25,17 +25,16 @@ class Network:
 
         self.connect_layers()
 
-
     def connect_layers(self):
         prev_ids = list(range(self.input_size))
 
         for layer in self.layers:
             for neuron in layer:
                 neuron.weights = {
-                    pid: random.uniform(-1, 1)
-                    for pid in prev_ids
+                    prev_id: random.uniform(-1, 1)
+                    for prev_id in prev_ids
                 }
-            prev_ids = [n.id for n in layer]
+            prev_ids = [neuron.id for neuron in layer]
 
     def fix_connections(self):
         # FIX FIRST HIDDEN LAYER (inputs)
@@ -44,8 +43,8 @@ class Network:
 
         for neuron in first_layer:
             neuron.weights = {
-                k: v for k, v in neuron.weights.items()
-                if k in input_ids
+                key: value for key, value in neuron.weights.items()
+                if key in input_ids
             }
             for i in input_ids:
                 if i not in neuron.weights:
@@ -56,12 +55,12 @@ class Network:
             prev_ids = {neuron.id for neuron in self.layers[i - 1]}
             for neuron in self.layers[i]:
                 neuron.weights = {
-                    k: v for k, v in neuron.weights.items()
-                    if k in prev_ids
+                    key: value for key, value in neuron.weights.items()
+                    if key in prev_ids
                 }
-                for pid in prev_ids:
-                    if pid not in neuron.weights:
-                        neuron.weights[pid] = random.uniform(-1, 1)
+                for prev_id in prev_ids:
+                    if prev_id not in neuron.weights:
+                        neuron.weights[prev_id] = random.uniform(-1, 1)
 
     def add_layer(self, probability:float = 0.0):
         """Add layer to random place in network based on the probability given."""
@@ -127,7 +126,6 @@ class Network:
 
         return next(iter(values.values()))
 
-
     def evaluate(self, dataset:list[tuple[list[float], float]], uses_log_scaling:bool = False):
         errors = []
         raw_errors = []
@@ -136,39 +134,21 @@ class Network:
 
         for inputs, target in dataset:
             inputs = [x + random.gauss(0, 0.01) for x in inputs] # minimal varience
-            pred = self.predict(inputs)
-            predictions.append(pred)
+            prediction = self.predict(inputs)
+            predictions.append(prediction)
 
             if uses_log_scaling:
-                errors.append(abs(pred - target))
-                pred_c = np.clip(pred, -5, MAX_LOG_PRICE)
-                tgt_c  = np.clip(target, -5, MAX_LOG_PRICE)
-                raw_errors.append(abs(np.expm1(pred_c) - np.expm1(tgt_c)))
+                errors.append(abs(prediction - target))
+                prediction_clamped = np.clip(prediction, -5, MAX_LOG_PRICE)
+                target_clamped  = np.clip(target, -5, MAX_LOG_PRICE)
+                raw_errors.append(abs(np.expm1(prediction_clamped) - np.expm1(target_clamped)))
 
         MAE = sum(errors) / len(errors)
         raw_MAE = sum(raw_errors) / len(raw_errors)
 
-        preds = np.clip(np.array(predictions), -5, MAX_LOG_PRICE)
-
-        # variance penalty
-        raw_preds = np.expm1(preds)
-        log_raw_preds = np.log1p(raw_preds)
-        
-        # pred_var = np.var(log_raw_preds)
-        if random.random() < 0.001: #SANITY CHECK, DEBUG
-            print("pred std:", np.std(log_raw_preds))
-
-
-        # if not np.isfinite(pred_var):
-        #     return float("inf"), float("inf")
-
-        # min_var = 0.01  # tune
-        # penalty = max(0.0, (min_var - pred_var) / min_var)
-        # MAE += 5.0 * penalty
-
         return MAE, raw_MAE
 
-    def get_genes(self): #IDK
+    def get_genes(self):
         genes = []
         for layer in self.layers:
             layer_genes = []
@@ -193,44 +173,25 @@ class Network:
         if index == all_layers - 1:
             return lambda x:x # Linear for the output
         else:
-            return lambda x: x if x > 0 else x * 0.01 # Leaky ReLU for the hidden layers
+            return lambda x: x if x > 0 else x * 0.01 # Leaky ReLU for the hidden layers (NOT ReLU)
         
-    def mutate_genes(self, current_gen:int, mutation_rate = 0.1, mutation_strength = 0.1, new_neuron_rate = 0.0, delete_neuron_rate = 0.0, new_layer_rate = 0.0, delete_layer_rate = 0.0, use_gaussian_dist = False):
-        """
-        Mutate a given set of genes (weights and biases) and return a new set of genes.
-        
-        Parameters:
-        - genes: list of layers, each layer is a list of [weights, bias] pairs
-        - mutation_rate: probability of mutating each weight/bias
-        - mutation_strength: maximum mutation magnitude
-        - use_gaussian_dist: if True, use Gaussian mutation; otherwise uniform
-        
-        Returns:
-        - new_genes: mutated copy of the input genes
-        """
+    def mutate_genes(self, mutation_rate = 0.1, mutation_strength = 0.1, new_neuron_rate = 0.0, delete_neuron_rate = 0.0, new_layer_rate = 0.0, delete_layer_rate = 0.0, use_gaussian_dist = False, mutate_topology:bool = False):
+        """Mutate a given set of genes (weights and biases)."""
         for layer in self.layers:
             for neuron in layer:
                 for key in neuron.weights:
-                    # Mutate weights
+                    # Mutate and clamp weights
                     if random.random() < mutation_rate:
-                        if use_gaussian_dist:
-                            neuron.weights[key] += random.gauss(0, mutation_strength)
-                        else:
-                            neuron.weights[key] += random.uniform(-mutation_strength, mutation_strength)
-                    # Clamp weight
+                        neuron.weights[key] += random.gauss(0, mutation_strength) if use_gaussian_dist else random.uniform(-mutation_strength, mutation_strength)
                     neuron.weights[key] = max(min(neuron.weights[key], 20.0), -20.0)
 
-                # Mutate bias
+                # Mutate and clamp bias
                 if random.random() < mutation_rate:
-                    if use_gaussian_dist:
-                        neuron.bias += random.gauss(0, mutation_strength)
-                    else:
-                        neuron.bias += random.uniform(-mutation_strength, mutation_strength)
-                # Clamp bias
+                    neuron.bias += random.gauss(0, mutation_strength) if use_gaussian_dist else random.uniform(-mutation_strength, mutation_strength)
                 neuron.bias = max(min(neuron.bias, 5.0), -5.0)
 
         # Optionally we add/remove neurons/layers
-        if current_gen > 100: # Arbitrary
+        if mutate_topology:
             self.add_neuron(probability=new_neuron_rate)
             self.remove_neuron(probability=delete_neuron_rate)
             self.add_layer(probability=new_layer_rate)

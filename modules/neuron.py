@@ -15,6 +15,3 @@ class Neuron:
         for input_id, w in self.weights.items():
             s += w * inputs_by_id.get(input_id, 0.0)
         return self.activation(s)
-
-
-

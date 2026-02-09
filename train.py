@@ -12,6 +12,7 @@ parameters = load_json(os.path.join("training_parameters.json"))
 population_size = parameters["population_size"]
 survivors_count = parameters["survivors_count"]
 max_generations = parameters["max_generations"]
+topology_mutation_treshold = parameters["topology_mutation_treshold"]
 
 # Pass them into function for mutating!
 new_layer_rate = parameters["new_layer_rate"]
@@ -88,14 +89,13 @@ for generation in range(1, max_generations + 1):
     print(f"    - Patience used: {gens_without_improvement}\n")
 
     survivors = [network for network, log_mae, raw_mae in gen_performance[:survivors_count]]
-
-    # The non-survivors will be ovverwritten by copies of new mutations of survivors
     remaining = [network for network, log_mae, raw_mae in gen_performance[survivors_count:]]
 
+    # The non-survivors are ovverwritten by copies of new mutations of survivors
     for child in remaining:
         parent = random.choice(survivors)
         child.set_genes(parent.get_genes())                                                                             
-        child.mutate_genes(current_gen=generation, mutation_rate = mutation_rate, mutation_strength = mutation_strength * (mutation_strength_decay ** generation), new_layer_rate=new_layer_rate, delete_layer_rate=delete_layer_rate)
+        child.mutate_genes(mutation_rate = mutation_rate, mutation_strength = min(0.01, mutation_strength * (mutation_strength_decay ** generation)), new_layer_rate=new_layer_rate, delete_layer_rate=delete_layer_rate, mutate_topology=generation>topology_mutation_treshold)
     
     population = survivors + remaining
 
@@ -118,11 +118,9 @@ metrics = {
 }
 
 model_name = get_model_name(model_name)
-
 save_model(best_model_genes, metrics, parameters, model_name)
 
 # Command for running container
 # docker images, docker rmi [name]
-
 # docker build -t house_model .
-# docker run -d --rm --name house_train --user 1000:1000 -v /home/tinkajob/programming/house_prices:/app -v /home/tinkajob/programming/house_prices/models:/app/models house_model --model-name test_run
+# docker run -d --rm --name house_train --user 1000:1000 -v /home/tinkajob/programming/house_prices:/app -v /home/tinkajob/programming/house_prices/models:/app/models house_model --model-name [model_name]
