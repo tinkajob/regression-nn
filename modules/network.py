@@ -38,17 +38,30 @@ class Network:
             prev_ids = [n.id for n in layer]
 
     def fix_connections(self):
+        # FIX FIRST HIDDEN LAYER (inputs)
+        first_layer = self.layers[0]
+        input_ids = set(range(self.input_size))
+
+        for neuron in first_layer:
+            neuron.weights = {
+                k: v for k, v in neuron.weights.items()
+                if k in input_ids
+            }
+            for i in input_ids:
+                if i not in neuron.weights:
+                    neuron.weights[i] = random.uniform(-1, 1)
+
+        # FIX REMAINING LAYERS
         for i in range(1, len(self.layers)):
             prev_ids = {neuron.id for neuron in self.layers[i - 1]}
             for neuron in self.layers[i]:
-                
-                # Remove dead inputs
-                neuron.weights = {key: value for key, value in neuron.weights.items() if key in prev_ids}
-                
-                # Add missing inputs
-                for prev in self.layers[i - 1]:
-                    if prev.id not in neuron.weights:
-                        neuron.weights[prev.id] = random.uniform(-1, 1)
+                neuron.weights = {
+                    k: v for k, v in neuron.weights.items()
+                    if k in prev_ids
+                }
+                for pid in prev_ids:
+                    if pid not in neuron.weights:
+                        neuron.weights[pid] = random.uniform(-1, 1)
 
     def add_layer(self, probability:float = 0.0):
         """Add layer to random place in network based on the probability given."""
@@ -119,9 +132,10 @@ class Network:
         errors = []
         raw_errors = []
         predictions = []
-        MAX_LOG_PRICE = 25
+        MAX_LOG_PRICE = 20
 
         for inputs, target in dataset:
+            inputs = [x + random.gauss(0, 0.01) for x in inputs] # minimal varience
             pred = self.predict(inputs)
             predictions.append(pred)
 
@@ -140,17 +154,17 @@ class Network:
         raw_preds = np.expm1(preds)
         log_raw_preds = np.log1p(raw_preds)
         
-        pred_var = np.var(log_raw_preds)
+        # pred_var = np.var(log_raw_preds)
         if random.random() < 0.001: #SANITY CHECK, DEBUG
             print("pred std:", np.std(log_raw_preds))
 
 
-        if not np.isfinite(pred_var):
-            return float("inf"), float("inf")
+        # if not np.isfinite(pred_var):
+        #     return float("inf"), float("inf")
 
-        min_var = 0.01  # tune
-        penalty = max(0.0, (min_var - pred_var) / min_var)
-        MAE += 5.0 * penalty
+        # min_var = 0.01  # tune
+        # penalty = max(0.0, (min_var - pred_var) / min_var)
+        # MAE += 5.0 * penalty
 
         return MAE, raw_MAE
 
@@ -204,7 +218,7 @@ class Network:
                         else:
                             neuron.weights[key] += random.uniform(-mutation_strength, mutation_strength)
                     # Clamp weight
-                    neuron.weights[key] = max(min(neuron.weights[key], 5.0), -5.0)
+                    neuron.weights[key] = max(min(neuron.weights[key], 20.0), -20.0)
 
                 # Mutate bias
                 if random.random() < mutation_rate:

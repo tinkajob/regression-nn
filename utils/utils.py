@@ -1,4 +1,4 @@
-import json, os
+import json, os, argparse, sys
 from modules.normalizer import Normalizer
 from datetime import datetime
 from pathlib import Path
@@ -7,11 +7,11 @@ def load_json(path):
     with open(path) as file:
         return json.load(file)
 
-def save_model(genes, metrics, parameters, name = "", base_dir = "models"):
+def save_model(genes, metrics, parameters, name:str, base_dir = "models"):
     """Saves model info in it's folder, along with the metadata. If the name of the model directory is name if it is given, otherwise timestamp is used."""
 
     timestamp = datetime.now().isoformat(timespec="seconds").replace(":", "-")
-    model_dir = os.path.join(base_dir, name if name != "" else f"model_{timestamp}")
+    model_dir = os.path.join(base_dir, name)
 
     os.makedirs(model_dir, exist_ok = False)
 
@@ -64,3 +64,28 @@ def normalize_input(values:dict, features:list, norm:Normalizer):
 
         normalized.append(normalized_value)
     return normalized
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Train house price model")
+
+    parser.add_argument(
+        "--model-name",
+        type=str,
+        default=None,
+        help="Name of output model (without extension)"
+    )
+
+    return parser.parse_args()
+
+def get_model_name(model_name:str = "") -> str:
+    """Return the name of the model based on parsed arguments and environment."""
+
+    if model_name:
+        return model_name
+    
+    if sys.stdin.isatty():
+        if name := input("How would you like to name your model? (leave empty for default)\n:").strip():
+            return name
+    
+    timestamp = datetime.now().isoformat(timespec="seconds").replace(":", "-")
+    return f"model-{timestamp}"

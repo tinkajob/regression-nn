@@ -1,10 +1,11 @@
-# This is a version of normal evolution with log-scaled prices, and gradually descending mutation strength, and Leaky ReLU
-
 import pandas, random
 import numpy as np
 from utils.utils import *
 from modules.normalizer import Normalizer
 from modules.network import Network
+
+args = parse_args()
+model_name = args.model_name
 
 parameters = load_json(os.path.join("training_parameters.json"))
 
@@ -81,7 +82,6 @@ for generation in range(1, max_generations + 1):
             print("MODEL EXCEEDED PATIENCE MAXIMUM!\nSTOPPING NOW")
             break
 
-
     print(f"COMPLETED TRAINING GENERATION: {generation}")
     print(f"    - Best MAE (dollars): {dollar_mae:,.2f}")
     print(f"    - Best MAE (log-scaled): {log_scaled_mae:,.10f}")
@@ -110,10 +110,19 @@ metrics = {
     "timestamp": datetime.now().isoformat(timespec="seconds").replace(":", "-"), 
     "generation": last_gen,
     "MAE": validation_mae,
-    "layer_sizes": best_model.get_layer_sizes(),
+    "layer_sizes": [len(features)] + best_model.get_layer_sizes(),
     "normalization": {
         "means": norm.means,
         "stds": norm.stds
     }
 }
-save_model(best_model_genes, metrics, parameters, input("How would you like to name this model? (leave empty for default)\n: "))
+
+model_name = get_model_name(model_name)
+
+save_model(best_model_genes, metrics, parameters, model_name)
+
+# Command for running container
+# docker images, docker rmi [name]
+
+# docker build -t house_model .
+# docker run -d --rm --name house_train --user 1000:1000 -v /home/tinkajob/programming/house_prices:/app -v /home/tinkajob/programming/house_prices/models:/app/models house_model --model-name test_run

@@ -11,4 +11,4 @@ COPY . /app
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Default command (change train.py if needed)
-CMD ["python", "-u", "train.py"]
+ENTRYPOINT ["python", "-u", "train.py"]

@@ -59,11 +59,11 @@ user_input = {
 
 # build ordered + normalized input vector
 inputs = []
-for feature in parameters["features"]:
-    raw = user_input[feature]
-    mean = norm.means[feature]
-    std = norm.stds[feature]
-    inputs.append((raw - mean) / std)
+# for feature in parameters["features"]:
+#     raw = user_input[feature]
+#     mean = norm.means[feature]
+#     std = norm.stds[feature]
+#     inputs.append((raw - mean) / std)
 
 # Normalizing the values with the same means and stds as during training
 user_input = normalize_input(user_input, parameters["features"], norm)
