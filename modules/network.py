@@ -126,13 +126,14 @@ class Network:
 
         return next(iter(values.values()))
 
-    def evaluate(self, dataset:list[tuple[list[float], float]], uses_log_scaling:bool = False):
+    def evaluate(self, dataset, uses_log_scaling:bool = False):
+        X, y = dataset
         errors = []
         raw_errors = []
         predictions = []
         MAX_LOG_PRICE = 20
 
-        for inputs, target in dataset:
+        for inputs, target in zip(X, y):
             inputs = [x + random.gauss(0, 0.01) for x in inputs] # minimal varience
             prediction = self.predict(inputs)
             predictions.append(prediction)

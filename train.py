@@ -3,58 +3,38 @@ import numpy as np
 from utils.utils import *
 from modules.normalizer import Normalizer
 from modules.network import Network
-
-args = parse_args()
-model_name = args.model_name
-
-parameters = load_json(os.path.join("training_parameters.json"))
-
-population_size = parameters["population_size"]
-survivors_count = parameters["survivors_count"]
-max_generations = parameters["max_generations"]
-topology_mutation_treshold = parameters["topology_mutation_treshold"]
-
-# Pass them into function for mutating!
-new_layer_rate = parameters["new_layer_rate"]
-delete_layer_rate = parameters["delete_layer_rate"]
-new_neuron_rate = parameters["new_neuron_rate"]
-delete_neuron_rate = parameters["delete_neuron_rate"]
-
-features = parameters["features"]
-target = parameters["target"]
-patience = parameters["patience"]
-sort_key = parameters["sort_key"] # 1 - log-scaled MAE, 2 - raw dollars MAE
-
-mutation_rate = parameters["mutation_rate"]
-mutation_strength = parameters["mutation_strength"]
-mutation_strength_decay = parameters["mutation_strength_decay"]
+from utils.config import *
 
 norm = Normalizer()
 
 # We load the dataset, then we clean it
-df = pandas.read_csv("houses.csv")
+df = pandas.read_csv(data_path)
 df = df.dropna()
 df = df[df["price"] > 0]
 
-training_data = df[:3200]
-validation_data = df[3200:]
+training_data = df[:data_split_index]
+validation_data = df[data_split_index:]
 
 # We 'configure' normalizer only on training set, not on test set, and use only this configuration to normalize BOTH subsets (so that they are normalized in the same way)
 # We don't normalize the price as we use log-scaling!
-norm.fit(df[:3200], features) 
+norm.fit(training_data, features) 
 training_data = norm.transform(training_data, features)
 validation_data = norm.transform(validation_data, features)
 
-# This are lists of tuples: ([a, b, c, d, e, f], g)
-training_dataset = [(row[features].values.tolist(), np.log1p(row[target[0]])) for _, row in training_data.iterrows()]
-validation_dataset = [(row[features].values.tolist(), np.log1p(row[target[0]])) for _, row in validation_data.iterrows()]
+# # This are lists of tuples: ([a, b, c, d, e, f], g)
+# training_dataset = [(row[features].values.tolist(), np.log1p(row[target[0]])) for _, row in training_data.iterrows()]
+# validation_dataset = [(row[features].values.tolist(), np.log1p(row[target[0]])) for _, row in validation_data.iterrows()]
 
-network_size = [len(features), 32, 16, 1]
+X_train = training_data[features].values
+y_train = np.log1p(training_data[target[0]].values)
+
+X_validate = validation_data[features].values
+y_validate = np.log1p(validation_data[target[0]].values)
+
+training_dataset = (X_train, y_train)
+validation_dataset = (X_validate, y_validate)
+
 population = [Network(network_size) for _ in range(population_size)]
-
-best_model_score = 99999999999
-gens_without_improvement = 0
-last_gen = 0
 
 print("================================\n      STARTING TRAINING\n================================\n")
 
