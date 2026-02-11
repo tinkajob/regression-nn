@@ -21,10 +21,6 @@ norm.fit(training_data, features)
 training_data = norm.transform(training_data, features)
 validation_data = norm.transform(validation_data, features)
 
-# # This are lists of tuples: ([a, b, c, d, e, f], g)
-# training_dataset = [(row[features].values.tolist(), np.log1p(row[target[0]])) for _, row in training_data.iterrows()]
-# validation_dataset = [(row[features].values.tolist(), np.log1p(row[target[0]])) for _, row in validation_data.iterrows()]
-
 X_train = training_data[features].values
 y_train = np.log1p(training_data[target[0]].values)
 
