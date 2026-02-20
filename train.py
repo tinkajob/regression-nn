@@ -68,11 +68,13 @@ for generation in range(1, max_generations + 1):
             print("MODEL EXCEEDED PATIENCE MAXIMUM!\nSTOPPING NOW")
             break
 
+    best_model_validation_mae = best_model.evaluate(validation_dataset, uses_log_scaling = True)[0]
+
     print(f"COMPLETED TRAINING GENERATION: {generation}")
     print(f"    - Best MAE (dollars): {dollar_mae:,.2f}")
     print(f"    - Best MAE (log-scaled): {log_scaled_mae:,.10f}")
     print(f"    - Patience used: {gens_without_improvement}")
-    print(f"    - Validation MAE (of best model): {best_model.evaluate(validation_dataset, uses_log_scaling = True)[0]:,.10f}\n")
+    print(f"    - Validation MAE (of best model): {best_model_validation_mae:,.10f}\n")
 
     survivors = [network for network, log_mae, raw_mae in gen_performance[:survivors_count]]
     remaining = [network for network, log_mae, raw_mae in gen_performance[survivors_count:]]
