@@ -36,11 +36,20 @@ print("================================\n      STARTING TRAINING\n==============
 
 # Training loop
 for generation in range(1, max_generations + 1):
+    if training_interrupted:
+        break
+    
     gen_performance = []
     for child in population:
-        # This mae should be as low as possible
-        log_mae, raw_mae = child.evaluate(training_dataset, uses_log_scaling = True)
-        gen_performance.append((child, log_mae, raw_mae))
+        try:
+            # This mae should be as low as possible
+            log_mae, raw_mae = child.evaluate(training_dataset, uses_log_scaling = True)
+            gen_performance.append((child, log_mae, raw_mae))
+        except KeyboardInterrupt:
+            print("KEYBOARD INTERRUPT!")
+            print("Exiting and saving the best model!")
+            training_interrupted = True
+            break
 
     # After we have finished training a generation, we sort networks by their performance
     gen_performance.sort(key = lambda x:x[sort_key])
@@ -62,7 +71,8 @@ for generation in range(1, max_generations + 1):
     print(f"COMPLETED TRAINING GENERATION: {generation}")
     print(f"    - Best MAE (dollars): {dollar_mae:,.2f}")
     print(f"    - Best MAE (log-scaled): {log_scaled_mae:,.10f}")
-    print(f"    - Patience used: {gens_without_improvement}\n")
+    print(f"    - Patience used: {gens_without_improvement}")
+    print(f"    - Validation MAE (of best model): {best_model.evaluate(validation_dataset, uses_log_scaling = True)[0]:,.10f}\n")
 
     survivors = [network for network, log_mae, raw_mae in gen_performance[:survivors_count]]
     remaining = [network for network, log_mae, raw_mae in gen_performance[survivors_count:]]
@@ -75,8 +85,8 @@ for generation in range(1, max_generations + 1):
     
     population = survivors + remaining
 
-print("================================\n      VALIDATING MODEL\n================================\n")
 validation_mae, raw_validation_mae = best_model.evaluate(validation_dataset, uses_log_scaling = True)
+print("================================\n      VALIDATING MODEL\n================================\n")
 print(f"MODEL'S PERFORMANCE:")
 print(f"    - Dollars MAE: {raw_validation_mae:,.2f}")
 print(f"    - Log-scaled MAE: {validation_mae:,.10f}")

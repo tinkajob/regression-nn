@@ -36,3 +36,5 @@ gens_without_improvement = 0
 last_gen = 0
 
 network_size[0] = len(features)
+
+training_interrupted = False
