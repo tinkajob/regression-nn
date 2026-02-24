@@ -12,13 +12,13 @@ parameters = load_json(os.path.join("training_parameters.json"))
 population_size = parameters["population_size"]
 survivors_count = parameters["survivors_count"]
 max_generations = parameters["max_generations"]
-topology_mutation_treshold = parameters["topology_mutation_treshold"]
 
 # Pass them into function for mutating!
 new_layer_rate = parameters["new_layer_rate"]
 delete_layer_rate = parameters["delete_layer_rate"]
 new_neuron_rate = parameters["new_neuron_rate"]
 delete_neuron_rate = parameters["delete_neuron_rate"]
+topology_mutation_treshold = parameters["topology_mutation_treshold"]
 
 features = parameters["features"]
 target = parameters["target"]
@@ -95,7 +95,7 @@ for generation in range(1, max_generations + 1):
     for child in remaining:
         parent = random.choice(survivors)
         child.set_genes(parent.get_genes())                                                                             
-        child.mutate_genes(mutation_rate = mutation_rate, mutation_strength = min(0.01, mutation_strength * (mutation_strength_decay ** generation)), new_layer_rate=new_layer_rate, delete_layer_rate=delete_layer_rate, mutate_topology=generation>topology_mutation_treshold)
+        child.mutate_genes(mutation_rate = mutation_rate, mutation_strength = min(0.01, mutation_strength * (mutation_strength_decay ** generation)), new_layer_rate=new_layer_rate, delete_layer_rate=delete_layer_rate, mutate_topology=generation > topology_mutation_treshold)
     
     population = survivors + remaining
 
