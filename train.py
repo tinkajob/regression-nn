@@ -3,68 +3,53 @@ import numpy as np
 from utils.utils import *
 from modules.normalizer import Normalizer
 from modules.network import Network
-
-args = parse_args()
-model_name = args.model_name
-
-parameters = load_json(os.path.join("training_parameters.json"))
-
-population_size = parameters["population_size"]
-survivors_count = parameters["survivors_count"]
-max_generations = parameters["max_generations"]
-
-# Pass them into function for mutating!
-new_layer_rate = parameters["new_layer_rate"]
-delete_layer_rate = parameters["delete_layer_rate"]
-new_neuron_rate = parameters["new_neuron_rate"]
-delete_neuron_rate = parameters["delete_neuron_rate"]
-topology_mutation_treshold = parameters["topology_mutation_treshold"]
-
-features = parameters["features"]
-target = parameters["target"]
-patience = parameters["patience"]
-sort_key = parameters["sort_key"] # 1 - log-scaled MAE, 2 - raw dollars MAE
-
-mutation_rate = parameters["mutation_rate"]
-mutation_strength = parameters["mutation_strength"]
-mutation_strength_decay = parameters["mutation_strength_decay"]
+from utils.config import *
 
 norm = Normalizer()
 
 # We load the dataset, then we clean it
-df = pandas.read_csv("houses.csv")
+df = pandas.read_csv(data_path)
 df = df.dropna()
 df = df[df["price"] > 0]
 
-training_data = df[:3200]
-validation_data = df[3200:]
+training_data = df[:data_split_index]
+validation_data = df[data_split_index:]
 
 # We 'configure' normalizer only on training set, not on test set, and use only this configuration to normalize BOTH subsets (so that they are normalized in the same way)
 # We don't normalize the price as we use log-scaling!
-norm.fit(df[:3200], features) 
+norm.fit(training_data, features) 
 training_data = norm.transform(training_data, features)
 validation_data = norm.transform(validation_data, features)
 
-# This are lists of tuples: ([a, b, c, d, e, f], g)
-training_dataset = [(row[features].values.tolist(), np.log1p(row[target[0]])) for _, row in training_data.iterrows()]
-validation_dataset = [(row[features].values.tolist(), np.log1p(row[target[0]])) for _, row in validation_data.iterrows()]
+X_train = training_data[features].values
+y_train = np.log1p(training_data[target[0]].values)
 
-network_size = [len(features), 32, 16, 1]
+X_validate = validation_data[features].values
+y_validate = np.log1p(validation_data[target[0]].values)
+
+training_dataset = (X_train, y_train)
+validation_dataset = (X_validate, y_validate)
+
 population = [Network(network_size) for _ in range(population_size)]
-
-best_model_score = 99999999999
-gens_without_improvement = 0
-last_gen = 0
 
 print("================================\n      STARTING TRAINING\n================================\n")
 
 # Training loop
 for generation in range(1, max_generations + 1):
+    if training_interrupted:
+        break
+    
     gen_performance = []
     for child in population:
-        # This mae should be as low as possible
-        log_mae, raw_mae = child.evaluate(training_dataset, uses_log_scaling = True)
-        gen_performance.append((child, log_mae, raw_mae))
+        try:
+            # This mae should be as low as possible
+            log_mae, raw_mae = child.evaluate(training_dataset, uses_log_scaling = True)
+            gen_performance.append((child, log_mae, raw_mae))
+        except KeyboardInterrupt:
+            print("KEYBOARD INTERRUPT!")
+            print("Exiting and saving the best model!")
+            training_interrupted = True
+            break
 
     # After we have finished training a generation, we sort networks by their performance
     gen_performance.sort(key = lambda x:x[sort_key])
@@ -83,10 +68,13 @@ for generation in range(1, max_generations + 1):
             print("MODEL EXCEEDED PATIENCE MAXIMUM!\nSTOPPING NOW")
             break
 
+    best_model_validation_mae = best_model.evaluate(validation_dataset, uses_log_scaling = True)[0]
+
     print(f"COMPLETED TRAINING GENERATION: {generation}")
     print(f"    - Best MAE (dollars): {dollar_mae:,.2f}")
     print(f"    - Best MAE (log-scaled): {log_scaled_mae:,.10f}")
-    print(f"    - Patience used: {gens_without_improvement}\n")
+    print(f"    - Patience used: {gens_without_improvement}")
+    print(f"    - Validation MAE (of best model): {best_model_validation_mae:,.10f}\n")
 
     survivors = [network for network, log_mae, raw_mae in gen_performance[:survivors_count]]
     remaining = [network for network, log_mae, raw_mae in gen_performance[survivors_count:]]
@@ -99,8 +87,8 @@ for generation in range(1, max_generations + 1):
     
     population = survivors + remaining
 
-print("================================\n      VALIDATING MODEL\n================================\n")
 validation_mae, raw_validation_mae = best_model.evaluate(validation_dataset, uses_log_scaling = True)
+print("================================\n      VALIDATING MODEL\n================================\n")
 print(f"MODEL'S PERFORMANCE:")
 print(f"    - Dollars MAE: {raw_validation_mae:,.2f}")
 print(f"    - Log-scaled MAE: {validation_mae:,.10f}")
