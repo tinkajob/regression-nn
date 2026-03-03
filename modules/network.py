@@ -11,28 +11,6 @@ class Network:
             activation = ((lambda x: x) if i == len(layer_sizes) - 2 else lambda x: np.where(x > 0, x, x * 0.01))
             self.layers.append(Layer(activation=activation, input_size=layer_sizes[i], output_size=layer_sizes[i + 1]))
 
-    # def connect_layers(self):
-    #     """For each neuron in every layer of network it assigns correct number of **random** weights."""
-    #     prev_size = self.input_size
-
-    #     for layer in self.layers:
-    #         for neuron in layer:
-    #             neuron.weights = [random.uniform(-1, 1) for _ in range(prev_size)]
-    #         prev_size = len(layer)
-
-    # def fix_connections(self):
-    #     """Ensures there are the correct number of weights for each neuron in each layer"""
-    #     prev_size = self.input_size
-
-    #     for layer in self.layers:
-    #         for neuron in layer:
-    #             # So that there aren't too many weights
-    #             neuron.weights = neuron.weights[:prev_size] 
-
-    #             if len(neuron.weights) < prev_size:
-    #                 neuron.weights += [random.uniform(-1, 1) for _ in range(prev_size - len(neuron.weights))]
-    #         prev_size = len(layer)
-
     def add_layer(self, probability:float = 0.0):
         """Add layer to random place in network based on the probability given."""
 
@@ -106,8 +84,6 @@ class Network:
         new_row = np.random.uniform(-1, 1, (1, next_output))
         next_layer.weights = np.vstack([next_layer.weights, new_row])
 
-        # layer.append(Layer(biases=random.uniform(-1, 1), activation=self.get_activation(layer_index), weights=[random.uniform(-1, 1) for _ in range(len(self.layers[layer_index - 1]))]))
-
     def remove_neuron(self, probability = 0.0):
         # If there are no hidden layers or we didn't get chosen we exit
         if len(self.layers) <= 2 or random.random() >= probability:
@@ -158,24 +134,6 @@ class Network:
             raw_errors = np.abs(np.expm1(prediction_clamped) - np.expm1(target_clamped))
             return errors.mean(), raw_errors.mean()
         return np.abs(predictions - y).mean(), None
-        
-        
-        # errors = []
-        # raw_errors = []
-
-        # for inputs, target in zip(X, y):
-        #     prediction = self.predict(inputs)
-
-        #     if uses_log_scaling:
-        #         errors.append(abs(prediction - target))
-        #         prediction_clamped = np.clip(prediction, -5, MAX_LOG_PRICE)
-        #         target_clamped  = np.clip(target, -5, MAX_LOG_PRICE)
-        #         raw_errors.append(abs(np.expm1(prediction_clamped) - np.expm1(target_clamped)))
-
-        # MAE = np.mean(errors)
-        # raw_MAE = np.mean(raw_errors)
-
-        # return MAE, raw_MAE
 
     def get_genes(self):
         genes = []
@@ -211,22 +169,6 @@ class Network:
             # Mutation changes matrix is matrix of random values (if they are to be updated) and zeroes (if they are to stay the same)
             layer.weights += weights_mask * np.random.uniform(-mutation_strength, mutation_strength, layer.weights.shape)
             layer.biases += biases_mask * np.random.uniform(-mutation_strength, mutation_strength, layer.biases.shape)
-            
-            # for neuron in layer:
-            #     for i in range(len(neuron.weights)):
-            #         # Mutate and clamp weights
-            #         if random.random() < mutation_rate:
-            #             neuron.weights[i] += (random.gauss(0, mutation_strength) 
-            #                                   if use_gaussian_dist 
-            #                                   else random.uniform(-mutation_strength, mutation_strength))
-            #         neuron.weights[i] = max(min(neuron.weights[i], 20.0), -20.0)
-
-            #     # Mutate and clamp bias
-            #     if random.random() < mutation_rate:
-            #         neuron.bias += (random.gauss(0, mutation_strength) 
-            #                         if use_gaussian_dist 
-            #                         else random.uniform(-mutation_strength, mutation_strength))
-            #     neuron.bias = max(min(neuron.bias, 5.0), -5.0)
 
         # Optionally we add/remove neurons/layers
         if mutate_topology:

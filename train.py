@@ -108,8 +108,6 @@ metrics = {
 model_name = get_model_name(model_name)
 save_model(best_model_genes, metrics, parameters, model_name)
 
-
-
 # Commands for running container
 # docker images, docker rmi [name]
 # docker build -t house_model .
