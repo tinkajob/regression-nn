@@ -31,7 +31,7 @@ class Network:
 
         # create new layer
         new_layer = Layer(
-            activation=self.get_activation(is_output=False),
+            activation=self.get_activation(is_ouput=False),
             input_size=prev_output_size,
             output_size=new_size
         )
@@ -128,7 +128,6 @@ class Network:
 
             output_layer.weights = np.random.uniform(-1, 1, (prev_output, 1))
             output_layer.biases = np.random.uniform(-1, 1, 1)
-
     def predict(self, inputs):
         values = np.array(inputs)
 
@@ -168,9 +167,9 @@ class Network:
             layer.weights = np.array(gene["weights"], dtype=np.float32)  # overwrite weights
             layer.biases = np.array(gene["biases"], dtype=np.float32)     # overwrite bias
 
-    def get_activation(self, is_output = False):
+    def get_activation(self, is_ouput:bool = False):
         """Returns the correct activation function based on the rules we set."""
-        if is_output:
+        if is_ouput:
             return lambda x:x # Linear for the output
         else:
             return lambda x: np.where(x > 0, x, x* 0.01) # Leaky ReLU for the hidden layers (NOT ReLU)
