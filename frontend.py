@@ -27,20 +27,6 @@ norm.stds = metrics["normalization"]["stds"]
 model = Network(layer_sizes)
 model.set_genes(genes)
 
-# out = model.layers[-1][0]
-# print("OUTPUT WEIGHTS COUNT:", len(out.weights))
-# print("OUTPUT BIAS:", out.bias)
-# out = model.layers[-1][0]
-# print("OUTPUT WEIGHT KEYS:", out.weights.keys())
-
-# prev = model.layers[-2]
-# print("PREV LAYER IDS:", [n.id for n in prev])
-
-# test1 = model.predict([0.0] * len(parameters["features"]))
-# test2 = model.predict([10000000.0] * len(parameters["features"]))
-# print("SANITY:", test1, test2, test1 == test2)
-
-
 user_input = {
     "bedrooms": int(input("Enter the number of bedrooms: ")),
     "bathrooms": float(input("Enter the number of bathrooms: ")),
@@ -58,11 +44,6 @@ user_input = {
 
 # build ordered + normalized input vector
 inputs = []
-# for feature in parameters["features"]:
-#     raw = user_input[feature]
-#     mean = norm.means[feature]
-#     std = norm.stds[feature]
-#     inputs.append((raw - mean) / std)
 
 # Normalizing the values with the same means and stds as during training
 user_input = normalize_input(user_input, parameters["features"], norm)

@@ -18,7 +18,7 @@ class Network:
             return
             
         # Where to insert new layer; inserting pushes everything after it 1 index up
-        insert_index = random.randint(0, len(self.layers) - 1)
+        insert_index = random.randint(0, len(self.layers) - 2)
         new_size = random.randint(2, 6)
 
         # sizes
@@ -31,7 +31,7 @@ class Network:
 
         # create new layer
         new_layer = Layer(
-            activation=self.get_activation(insert_index),
+            activation=self.get_activation(is_output=False),
             input_size=prev_output_size,
             output_size=new_size
         )
@@ -109,6 +109,18 @@ class Network:
 
         next_layer.weights = np.delete(next_layer.weights, neuron_index, axis=0)
 
+    def repair_network(self):
+        """
+        Ensures every layer's input size matches
+        the previous layer's output size.
+        """
+        for i in range(1, len(self.layers)):
+            prev_output = self.layers[i - 1].weights.shape[1]
+            current_output = self.layers[i].weights.shape[1]
+
+            self.layers[i].weights = np.random.uniform(
+                -1, 1, (prev_output, current_output)
+            )
 
     def predict(self, inputs):
         values = np.array(inputs)
@@ -149,9 +161,9 @@ class Network:
             layer.weights = np.array(gene["weights"], dtype=np.float32)  # overwrite weights
             layer.biases = np.array(gene["biases"], dtype=np.float32)     # overwrite bias
 
-    def get_activation(self, index, total_layers = 0):
+    def get_activation(self, is_output = False):
         """Returns the correct activation function based on the rules we set."""
-        if index == len(self.layers) - 1:
+        if is_output:
             return lambda x:x # Linear for the output
         else:
             return lambda x: np.where(x > 0, x, x* 0.01) # Leaky ReLU for the hidden layers (NOT ReLU)
@@ -176,8 +188,7 @@ class Network:
             self.remove_neuron(probability=delete_neuron_rate)
             self.add_layer(probability=new_layer_rate)
             self.remove_layer(probability=delete_layer_rate)
-        
-        # self.fix_connections()
+            self.repair_network()
     
     def get_layer_sizes(self):
         """Returns a list with sizes of each layer of the network."""
