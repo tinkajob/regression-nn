@@ -121,6 +121,13 @@ class Network:
             self.layers[i].weights = np.random.uniform(
                 -1, 1, (prev_output, current_output)
             )
+        output_layer = self.layers[-1]
+
+        if output_layer.weights.shape[1] != 1:
+            prev_output = self.layers[-2].weights.shape[1]
+
+            output_layer.weights = np.random.uniform(-1, 1, (prev_output, 1))
+            output_layer.biases = np.random.uniform(-1, 1, 1)
 
     def predict(self, inputs):
         values = np.array(inputs)
