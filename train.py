@@ -82,8 +82,9 @@ for generation in range(1, max_generations + 1):
     # The non-survivors are ovverwritten by copies of new mutations of survivors
     for child in remaining:
         parent = random.choice(survivors)
-        child.set_genes(parent.get_genes())                                                                             
-        child.mutate_genes(mutation_rate = mutation_rate, mutation_strength = min(0.01, mutation_strength * (mutation_strength_decay ** generation)), new_layer_rate=new_layer_rate, delete_layer_rate=delete_layer_rate, mutate_topology=generation > topology_mutation_treshold)
+        child.set_genes(parent.get_genes())
+        mutation_strength *= mutation_strength_decay
+        child.mutate_genes(mutation_rate = mutation_rate, mutation_strength = max(0.05, mutation_strength), new_layer_rate=new_layer_rate, delete_layer_rate=delete_layer_rate, mutate_topology=generation < topology_mutation_treshold)
     
     population = survivors + remaining
 
