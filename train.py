@@ -81,7 +81,8 @@ for generation in range(1, max_generations + 1):
     
     if generation % 20 == 0:
         best_model_validation_mae = best_model.evaluate(validation_dataset, uses_log_scaling = True)[0]
-        print(f"    - Validation MAE (of best model): {best_model_validation_mae:,.10f}\n")
+        print(f"    - Validation MAE (of best model): {best_model_validation_mae:,.10f}")
+    print()
 
     survivors = [network for network, log_mae, raw_mae in gen_performance[:survivors_count]]
     elites = survivors[:elites_count]
