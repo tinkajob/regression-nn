@@ -51,6 +51,6 @@ user_input = normalize_input(user_input, parameters["features"], norm)
 prediction = model.predict(user_input)
 prediction_value = float(np.squeeze(prediction))
 
-print("\n========================================")
+print("\n==========================================")
 print(f"Model's prediction: {np.expm1(prediction_value):,.2f}$ ({prediction_value})")
 print("==========================================")

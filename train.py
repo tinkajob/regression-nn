@@ -12,8 +12,9 @@ df = pandas.read_csv(data_path)
 df = df.dropna()
 df = df[df["price"] > 0]
 
-training_data = df[:data_split_index]
-validation_data = df[data_split_index:]
+split_idx = int(len(df) * data_split_index)
+training_data = df[:split_idx]
+validation_data = df[split_idx:]
 
 # We 'configure' normalizer only on training set, not on test set, and use only this configuration to normalize BOTH subsets (so that they are normalized in the same way)
 # We don't normalize the price as we use log-scaling!
@@ -39,12 +40,17 @@ for generation in range(1, max_generations + 1):
     if training_interrupted:
         break
     
+    # We create a mini batch of data (to prevent memorization and speed up training)
+    indices = np.random.choice(len(X_train), batch_size, replace=False) # Select random rows from dataset
+    training_batch = (X_train[indices], y_train[indices])
+
     gen_performance = []
     for child in population:
         try:
             # This mae should be as low as possible
-            log_mae, raw_mae = child.evaluate(training_dataset, uses_log_scaling = True)
+            log_mae, raw_mae = child.evaluate(training_batch, uses_log_scaling = True)
             gen_performance.append((child, log_mae, raw_mae))
+        
         except KeyboardInterrupt:
             print("KEYBOARD INTERRUPT!")
             print("Exiting and saving the best model!")
@@ -68,22 +74,24 @@ for generation in range(1, max_generations + 1):
             print("MODEL EXCEEDED PATIENCE MAXIMUM!\nSTOPPING NOW")
             break
 
-    best_model_validation_mae = best_model.evaluate(validation_dataset, uses_log_scaling = True)[0]
-
     print(f"COMPLETED TRAINING GENERATION: {generation}")
     print(f"    - Best MAE (dollars): {dollar_mae:,.2f}")
     print(f"    - Best MAE (log-scaled): {log_scaled_mae:,.10f}")
     print(f"    - Patience used: {gens_without_improvement}")
-    print(f"    - Validation MAE (of best model): {best_model_validation_mae:,.10f}\n")
+    
+    if generation % 20 == 0:
+        best_model_validation_mae = best_model.evaluate(validation_dataset, uses_log_scaling = True)[0]
+        print(f"    - Validation MAE (of best model): {best_model_validation_mae:,.10f}\n")
 
     survivors = [network for network, log_mae, raw_mae in gen_performance[:survivors_count]]
-    remaining = [network for network, log_mae, raw_mae in gen_performance[survivors_count:]]
+    elites = survivors[:elites_count]
+    remaining = [network for network, log_mae, raw_mae in gen_performance[elites_count:]]
 
+    mutation_strength *= mutation_strength_decay
     # The non-survivors are ovverwritten by copies of new mutations of survivors
     for child in remaining:
         parent = random.choice(survivors)
         child.set_genes(parent.get_genes())
-        mutation_strength *= mutation_strength_decay
         child.mutate_genes(mutation_rate = mutation_rate, mutation_strength = max(0.05, mutation_strength), new_layer_rate=new_layer_rate, delete_layer_rate=delete_layer_rate, mutate_topology=generation < topology_mutation_treshold)
     
     population = survivors + remaining

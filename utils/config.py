@@ -11,6 +11,7 @@ parameters = load_json(os.path.join("training_parameters.json"))
 network_size = parameters["network_size"]
 population_size = parameters["population_size"]
 survivors_count = parameters["survivors_count"]
+elites_count = parameters["elites_count"]
 max_generations = parameters["max_generations"]
 
 # Pass them into function for mutating!
@@ -30,6 +31,7 @@ mutation_strength = parameters["mutation_strength"]
 mutation_strength_decay = parameters["mutation_strength_decay"]
 
 data_split_index = parameters["data_split_index"]
+batch_size = parameters["batch_size"]
 
 best_model_score = 99999999999
 gens_without_improvement = 0

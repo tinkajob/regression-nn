@@ -128,6 +128,7 @@ class Network:
 
             output_layer.weights = np.random.uniform(-1, 1, (prev_output, 1))
             output_layer.biases = np.random.uniform(-1, 1, 1)
+    
     def predict(self, inputs):
         values = np.array(inputs)
 
