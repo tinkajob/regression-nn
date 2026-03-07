@@ -85,15 +85,15 @@ for generation in range(1, max_generations + 1):
     print()
 
     survivors = [network for network, log_mae, raw_mae in gen_performance[:survivors_count]]
-    elites = survivors[:elites_count]
-    remaining = [network for network, log_mae, raw_mae in gen_performance[elites_count:]]
+    remaining = [network for network, log_mae, raw_mae in gen_performance[survivors_count:]]
 
     mutation_strength *= mutation_strength_decay
+    mutation_strength = max(0.05, mutation_strength)
     # The non-survivors are ovverwritten by copies of new mutations of survivors
     for child in remaining:
         parent = random.choice(survivors)
         child.set_genes(parent.get_genes())
-        child.mutate_genes(mutation_rate = mutation_rate, mutation_strength = max(0.05, mutation_strength), new_layer_rate=new_layer_rate, delete_layer_rate=delete_layer_rate, mutate_topology=generation < topology_mutation_treshold)
+        child.mutate_genes(mutation_rate=mutation_rate, mutation_strength=mutation_strength, new_layer_rate=new_layer_rate, delete_layer_rate=delete_layer_rate, mutate_topology=generation < topology_mutation_treshold, min_layers_count=min_layers, min_layer_size=min_layer_size, max_layer_size=max_layer_size, max_neurons=max_neurons, max_layers_count=max_layers)
     
     population = survivors + remaining
 
