@@ -11,6 +11,7 @@ parameters = load_json(os.path.join("training_parameters.json"))
 network_size = parameters["network_size"]
 population_size = parameters["population_size"]
 survivors_count = parameters["survivors_count"]
+elites_count = parameters["elites_count"]
 max_generations = parameters["max_generations"]
 
 # Pass them into function for mutating!

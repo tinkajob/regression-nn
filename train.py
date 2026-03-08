@@ -1,4 +1,4 @@
-import pandas, random
+import pandas, random, copy
 import numpy as np
 from utils.utils import *
 from modules.normalizer import Normalizer
@@ -82,19 +82,21 @@ for generation in range(1, max_generations + 1):
     if generation % 20 == 0:
         best_model_validation_mae = best_model.evaluate(validation_dataset, uses_log_scaling = True)[0]
         print(f"    - Validation MAE (of best model): {best_model_validation_mae:,.10f}")
+        print(f"    - Layer sizes of the best model: {best_model.get_layer_sizes()}")
     print()
 
     survivors = [network for network, log_mae, raw_mae in gen_performance[:survivors_count]]
-    remaining = [network for network, log_mae, raw_mae in gen_performance[survivors_count:]]
+    remaining = [network for network, log_mae, raw_mae in gen_performance[elites_count:]]
 
     mutation_strength *= mutation_strength_decay
     mutation_strength = max(0.05, mutation_strength)
     # The non-survivors are ovverwritten by copies of new mutations of survivors
-    for child in remaining:
+    for i in range(len(remaining)):
         parent = random.choice(survivors)
-        child.set_genes(parent.get_genes())
+        child = copy.deepcopy(parent)
         child.mutate_genes(mutation_rate=mutation_rate, mutation_strength=mutation_strength, new_layer_rate=new_layer_rate, delete_layer_rate=delete_layer_rate, mutate_topology=generation < topology_mutation_treshold, min_layers_count=min_layers, min_layer_size=min_layer_size, max_layer_size=max_layer_size, max_neurons=max_neurons, max_layers_count=max_layers)
-    
+        remaining[i] = child
+
     population = survivors + remaining
 
 validation_mae, raw_validation_mae = best_model.evaluate(validation_dataset, uses_log_scaling = True)
@@ -117,8 +119,3 @@ metrics = {
 
 model_name = get_model_name(model_name)
 save_model(best_model_genes, metrics, parameters, model_name)
-
-# Commands for running container
-# docker images, docker rmi [name]
-# docker build -t house_model .
-# docker run -d --rm --name house_train --user 1000:1000 -v /home/tinkajob/programming/house_prices:/app -v /home/tinkajob/programming/house_prices/models:/app/models house_model --model-name [model_name]

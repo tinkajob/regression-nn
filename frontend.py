@@ -24,8 +24,10 @@ layer_sizes = metrics["layer_sizes"]
 norm.means = metrics["normalization"]["means"]
 norm.stds = metrics["normalization"]["stds"]
 
+min_layer_size = parameters["min_layer_size"]
+
 model = Network(layer_sizes)
-model.set_genes(genes)
+model.set_genes(genes, min_layer_size=min_layer_size)
 
 user_input = {
     "bedrooms": int(input("Enter the number of bedrooms: ")),

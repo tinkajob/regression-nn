@@ -11,10 +11,10 @@ class Network:
             activation = ((lambda x: x) if i == len(layer_sizes) - 2 else lambda x: np.where(x > 0, x, x * 0.01))
             self.layers.append(Layer(activation=activation, input_size=layer_sizes[i], output_size=layer_sizes[i + 1]))
 
-    def add_layer(self, probability:float = 0.0, max_neurons = 128, max_layers_count = 8):
+    def add_layer(self, probability:float = 0.0, max_neurons = 128, max_layers_count = 8, min_layer_size = 2):
         """Add layer to random place in network based on the probability given."""
 
-        new_size = random.randint(2, 6)
+        new_size = random.randint(min_layer_size, 6)
         
         if random.random() >= probability or len(self.layers) >= max_layers_count or self.get_total_neurons() + new_size >= max_neurons:
             return
@@ -22,13 +22,7 @@ class Network:
         # Where to insert new layer; inserting pushes everything after it 1 index up
         insert_index = random.randint(0, len(self.layers) - 2)
 
-        # sizes
         prev_output_size = self.layers[insert_index].weights.shape[1]
-
-        if insert_index + 1 < len(self.layers):
-            next_output_size = self.layers[insert_index + 1].weights.shape[1]
-        else:
-            next_output_size = None  # inserting at end
 
         # create new layer
         new_layer = Layer(
@@ -37,19 +31,14 @@ class Network:
             output_size=new_size
         )
 
-        # insert
         self.layers.insert(insert_index + 1, new_layer)
 
-        # fix next layer input size
-        if next_output_size is not None:
-            self.layers[insert_index + 2].weights = np.random.uniform(
-                -1, 1, (new_size, next_output_size)
-            )
+        self.repair_network(min_layer_size=min_layer_size)
 
-    def remove_layer(self, min_layers_count:int = 4, probability:float = 0.0):
+    def remove_layer(self, min_layers_count:int = 4, probability:float = 0.0, min_layer_size=2):
         """Remove layer from random place in network based on the probability given. We only do that if there are enough hidden layers"""
 
-        if random.random() >= probability or len(self.layers) < min_layers_count:
+        if random.random() >= probability or len(self.layers) <= min_layers_count:
             return
 
         remove_index = random.randint(1, len(self.layers) - 2)
@@ -66,13 +55,18 @@ class Network:
         )
 
         self.layers.pop(remove_index)
+        self.repair_network(min_layer_size=min_layer_size)
 
     def add_neuron(self, probability = 0.0, max_neurons = 128, max_layer_size = 40):
-        if len(self.layers) >= max_layer_size or random.random() >= probability or self.get_total_neurons() >= max_neurons:
+        if len(self.layers) <= 2:
             return
- 
+        
         layer_index = random.randint(1, len(self.layers) - 2)
         layer = self.layers[layer_index]
+        
+        if layer.weights.shape[1] >= max_layer_size or random.random() >= probability or self.get_total_neurons() >= max_neurons: # The last one is so that we don't change input/output layers
+            return
+ 
         input_size, output_size = layer.weights.shape
 
         new_column = np.random.uniform(-1, 1, (input_size, 1))
@@ -87,48 +81,45 @@ class Network:
 
     def remove_neuron(self, probability = 0.0, min_layer_size = 2):
         # If there are no hidden layers or we didn't get chosen we exit
-        if len(self.layers) <= min_layer_size or random.random() >= probability:
-            return
-
         layer_index = random.randint(1, len(self.layers) - 2)
         layer = self.layers[layer_index]
 
-        if layer.weights.shape[1] <= 1:
+        if layer.weights.shape[1] <= min_layer_size or random.random() >= probability:
             return
 
         neuron_index = random.randrange(layer.weights.shape[1])
+
+        # Update next layer
+        next_layer = self.layers[layer_index + 1]
+
+        if next_layer.weights.shape[0] <= min_layer_size:
+            return
 
         # Remove neuron
         layer.weights = np.delete(layer.weights, neuron_index, axis=1)
         layer.biases = np.delete(layer.biases, neuron_index)
 
-        # Update next layer
-        next_layer = self.layers[layer_index + 1]
-
-        if next_layer.weights.shape[0] <= 1:
-            return
-
         next_layer.weights = np.delete(next_layer.weights, neuron_index, axis=0)
 
-    def repair_network(self):
+    def repair_network(self, min_layer_size = 2):
         """
         Ensures every layer's input size matches
         the previous layer's output size.
         """
-        for i in range(1, len(self.layers)):
+        for i in range(1, len(self.layers) - 1):
             prev_output = self.layers[i - 1].weights.shape[1]
-            current_output = self.layers[i].weights.shape[1]
+            current_output = max(self.layers[i].weights.shape[1], min_layer_size)
 
             self.layers[i].weights = np.random.uniform(
                 -1, 1, (prev_output, current_output)
             )
+            self.layers[i].biases = np.random.uniform(-1, 1, current_output)
+        
         output_layer = self.layers[-1]
+        prev_output = self.layers[-2].weights.shape[1]
 
-        if output_layer.weights.shape[1] != 1:
-            prev_output = self.layers[-2].weights.shape[1]
-
-            output_layer.weights = np.random.uniform(-1, 1, (prev_output, 1))
-            output_layer.biases = np.random.uniform(-1, 1, 1)
+        output_layer.weights = np.random.uniform(-1, 1, (prev_output, 1))
+        output_layer.biases = np.random.uniform(-1, 1, 1)
     
     def predict(self, inputs):
         values = np.array(inputs)
@@ -164,10 +155,11 @@ class Network:
             })
         return genes
 
-    def set_genes(self, genes):
+    def set_genes(self, genes, min_layer_size):
         for layer, gene in zip(self.layers, genes):
             layer.weights = np.array(gene["weights"], dtype=np.float32)  # overwrite weights
             layer.biases = np.array(gene["biases"], dtype=np.float32)     # overwrite bias
+        self.repair_network(min_layer_size=min_layer_size)
 
     def get_activation(self, is_ouput:bool = False):
         """Returns the correct activation function based on the rules we set."""
@@ -192,11 +184,11 @@ class Network:
 
         # Optionally we add/remove neurons/layers
         if mutate_topology:
+            self.add_layer(probability=new_layer_rate, max_neurons=max_neurons, max_layers_count=max_layers_count, min_layer_size=min_layer_size)
+            self.remove_layer(probability=delete_layer_rate, min_layers_count=min_layers_count, min_layer_size=min_layer_size)
             self.add_neuron(probability=new_neuron_rate, max_layer_size=max_layer_size, max_neurons=max_neurons)
             self.remove_neuron(probability=delete_neuron_rate, min_layer_size=min_layer_size)
-            self.add_layer(probability=new_layer_rate, max_neurons=max_neurons, max_layers_count=max_layers_count)
-            self.remove_layer(probability=delete_layer_rate, min_layers_count=min_layers_count)
-            self.repair_network()
+            self.repair_network(min_layer_size=min_layer_size)
     
     def get_layer_sizes(self):
         """Returns a list with sizes of each layer of the network."""
