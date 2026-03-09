@@ -1,4 +1,5 @@
 import json, os, argparse, sys
+import numpy as np
 from modules.normalizer import Normalizer
 from datetime import datetime
 from pathlib import Path
@@ -89,3 +90,26 @@ def get_model_name(model_name:str = "") -> str:
     
     timestamp = datetime.now().isoformat(timespec="seconds").replace(":", "-")
     return f"model-{timestamp}"
+
+def resize_matrix(matrix, new_shape:tuple[int, int]):
+    old_rows, old_cols = matrix.shape
+    new_rows, new_cols = new_shape
+
+    # Create a new blank matrix on new_size
+    new_matrix = np.random.uniform(-1, 1, new_shape)
+
+    rows = min(old_rows, new_rows)
+    cols = min(old_cols, new_cols)
+    
+    # Copy old matrix into the new one (as much as it fits)
+    new_matrix[:rows, :cols] = matrix[:rows, :cols]
+
+    return new_matrix
+
+def resize_vector(vector, new_size):
+    new_vector = np.random.uniform(-1, 1, new_size)
+
+    size = min(len(vector), new_size)
+    new_vector[:size] = vector[:size]
+
+    return new_vector

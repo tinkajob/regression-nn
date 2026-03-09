@@ -1,6 +1,7 @@
 import random
 import numpy as np
 from .layer import Layer
+from utils.utils import resize_matrix, resize_vector
 
 class Network:
     def __init__(self, layer_sizes):
@@ -110,16 +111,23 @@ class Network:
             prev_output = self.layers[i - 1].weights.shape[1]
             current_output = max(self.layers[i].weights.shape[1], min_layer_size)
 
-            self.layers[i].weights = np.random.uniform(
-                -1, 1, (prev_output, current_output)
-            )
-            self.layers[i].biases = np.random.uniform(-1, 1, current_output)
+            layer = self.layers[i]
+
+            layer.weights = resize_matrix(matrix=layer.weights, new_shape=(prev_output, current_output))
+            # np.random.uniform(
+            #     -1, 1, (prev_output, current_output)
+            # )
+            layer.biases = resize_vector(vector=layer.biases, new_size=current_output)
+            # np.random.uniform(-1, 1, current_output)
         
         output_layer = self.layers[-1]
         prev_output = self.layers[-2].weights.shape[1]
 
-        output_layer.weights = np.random.uniform(-1, 1, (prev_output, 1))
-        output_layer.biases = np.random.uniform(-1, 1, 1)
+        output_layer.weights = resize_matrix(matrix=output_layer.weights, new_shape=(prev_output, 1))
+        # np.random.uniform(-1, 1, (prev_output, 1))
+        output_layer.biases = resize_vector(vector=output_layer.biases, new_size=1)
+        np.random.uniform(-1, 1, 1)
+
     
     def predict(self, inputs):
         values = np.array(inputs)
