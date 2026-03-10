@@ -1,4 +1,4 @@
-import pandas, random, copy
+import random, copy
 import numpy as np
 from utils.utils import *
 from modules.normalizer import Normalizer
@@ -7,27 +7,7 @@ from utils.config import *
 
 norm = Normalizer()
 
-# We load the dataset, then we clean it
-df = pandas.read_csv(data_path)
-df = df.dropna()
-df = df[df["price"] > 0]
-
-split_idx = int(len(df) * data_split_index)
-training_data = df[:split_idx]
-validation_data = df[split_idx:]
-
-# We 'configure' normalizer only on training set, not on test set, and use only this configuration to normalize BOTH subsets (so that they are normalized in the same way)
-# We don't normalize the price as we use log-scaling!
-norm.fit(training_data, features) 
-training_data = norm.transform(training_data, features)
-validation_data = norm.transform(validation_data, features)
-
-X_train = training_data[features].values
-y_train = np.log1p(training_data[target[0]].values)
-
-X_validate = validation_data[features].values
-y_validate = np.log1p(validation_data[target[0]].values)
-
+X_train, y_train, X_validate, y_validate = split_dataset(norm=norm, data_path=data_path, data_split_index=data_split_index, features=features, target=target)
 training_dataset = (X_train, y_train)
 validation_dataset = (X_validate, y_validate)
 
@@ -40,7 +20,7 @@ for generation in range(1, max_generations + 1):
     if training_interrupted:
         break
     
-    # We create a mini batch of data (to prevent memorization and speed up training)
+    # Create a mini batch of data (to prevent memorization and speed up training)
     indices = np.random.choice(len(X_train), batch_size, replace=False) # Select random rows from dataset
     training_batch = (X_train[indices], y_train[indices])
 
@@ -106,16 +86,18 @@ print(f"    - Dollars MAE: {raw_validation_mae:,.2f}")
 print(f"    - Log-scaled MAE: {validation_mae:,.10f}")
 
 best_model_genes = best_model.get_genes()
-metrics = {
-    "timestamp": datetime.now().isoformat(timespec="seconds").replace(":", "-"), 
-    "generation": last_gen,
-    "MAE": validation_mae,
-    "layer_sizes": [len(features)] + best_model.get_layer_sizes(),
-    "normalization": {
-        "means": norm.means,
-        "stds": norm.stds
-    }
-}
+layer_sizes = [len(features)] + best_model.get_layer_sizes()
+metrics = get_model_metrics(generation=last_gen, validation_mae=validation_mae, layer_sizes=layer_sizes, means=norm.means, stds=norm.stds)
+# metrics = {
+#     "timestamp": datetime.now().isoformat(timespec="seconds").replace(":", "-"), 
+#     "generation": last_gen,
+#     "MAE": validation_mae,
+#     "layer_sizes": ,
+#     "normalization": {
+#         "means": norm.means,
+#         "stds": norm.stds
+#     }
+# }
 
 model_name = get_model_name(model_name)
 save_model(best_model_genes, metrics, parameters, model_name)

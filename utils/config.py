@@ -6,7 +6,7 @@ model_name = args.model_name
 
 data_path = "houses.csv"
 
-parameters = load_json(os.path.join("training_parameters.json"))
+parameters = load_json(path=os.path.join("training_parameters.json"))
 
 network_size = parameters["network_size"]
 population_size = parameters["population_size"]

@@ -1,4 +1,4 @@
-import json, os, argparse, sys
+import json, os, argparse, sys, pandas
 import numpy as np
 from modules.normalizer import Normalizer
 from datetime import datetime
@@ -113,3 +113,40 @@ def resize_vector(vector, new_size):
     new_vector[:size] = vector[:size]
 
     return new_vector
+
+def get_model_metrics(generation, validation_mae, layer_sizes, means, stds):
+    metrics = {
+        "timestamp": datetime.now().isoformat(timespec="seconds").replace(":", "-"), 
+        "generation": generation,
+        "MAE": validation_mae,
+        "layer_sizes": layer_sizes,
+        "normalization": {
+            "means": means,
+            "stds": stds
+        }
+    }
+    return metrics
+
+def split_dataset(norm, data_path, data_split_index, features, target):
+    # We load the dataset, then we clean it
+    df = pandas.read_csv(data_path)
+    df = df.dropna()
+    df = df[df["price"] > 0]
+
+    split_idx = int(len(df) * data_split_index)
+    training_data = df[:split_idx]
+    validation_data = df[split_idx:]
+
+    # We 'configure' normalizer only on training set, not on test set, and use only this configuration to normalize BOTH subsets (so that they are normalized in the same way)
+    # We don't normalize the price as we use log-scaling!
+    norm.fit(training_data, features)
+    training_data = norm.transform(training_data, features)
+    validation_data = norm.transform(validation_data, features)
+
+    X_train = training_data[features].values
+    y_train = np.log1p(training_data[target[0]].values)
+
+    X_validate = validation_data[features].values
+    y_validate = np.log1p(validation_data[target[0]].values)
+
+    return X_train, y_train, X_validate, y_validate

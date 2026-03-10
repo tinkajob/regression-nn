@@ -14,15 +14,21 @@ class Network:
 
     def add_layer(self, probability:float = 0.0, max_neurons = 128, max_layers_count = 8, min_layer_size = 2):
         """Add layer to random place in network based on the probability given."""
+        # Don't add layer if the probability isn't selected,
+        # if there is already max number of layers
+        # or if new layer would add too many neurons
+        if random.random() >= probability:
+            return
 
-        new_size = random.randint(min_layer_size, 6)
+        if len(self.layers) >= max_layers_count:
+            return
         
-        if random.random() >= probability or len(self.layers) >= max_layers_count or self.get_total_neurons() + new_size >= max_neurons:
+        new_size = random.randint(min_layer_size, 6)
+        if self.get_total_neurons() + new_size >= max_neurons:
             return
             
         # Where to insert new layer; inserting pushes everything after it 1 index up
         insert_index = random.randint(0, len(self.layers) - 2)
-
         prev_output_size = self.layers[insert_index].weights.shape[1]
 
         # create new layer
@@ -33,12 +39,11 @@ class Network:
         )
 
         self.layers.insert(insert_index + 1, new_layer)
-
         self.repair_network(min_layer_size=min_layer_size)
 
     def remove_layer(self, min_layers_count:int = 4, probability:float = 0.0, min_layer_size=2):
         """Remove layer from random place in network based on the probability given. We only do that if there are enough hidden layers"""
-
+        # Don't remove a layer if probability isn't selected or if there are no hidden layers
         if random.random() >= probability or len(self.layers) <= min_layers_count:
             return
 
@@ -59,13 +64,23 @@ class Network:
         self.repair_network(min_layer_size=min_layer_size)
 
     def add_neuron(self, probability = 0.0, max_neurons = 128, max_layer_size = 40):
+        # Don't add neurons if there are no hidden layers,
+        # if probability isn't selected,
+        # if there are already max number of neurons
+        # or if the layer is alreaady max size
         if len(self.layers) <= 2:
+            return
+        
+        if random.random() >= probability:
+            return
+        
+        if self.get_total_neurons() >= max_neurons:
             return
         
         layer_index = random.randint(1, len(self.layers) - 2)
         layer = self.layers[layer_index]
         
-        if layer.weights.shape[1] >= max_layer_size or random.random() >= probability or self.get_total_neurons() >= max_neurons: # The last one is so that we don't change input/output layers
+        if layer.weights.shape[1] >= max_layer_size:
             return
  
         input_size, output_size = layer.weights.shape
@@ -81,11 +96,14 @@ class Network:
         next_layer.weights = np.vstack([next_layer.weights, new_row])
 
     def remove_neuron(self, probability = 0.0, min_layer_size = 2):
-        # If there are no hidden layers or we didn't get chosen we exit
+        if random.random() >= probability:
+            return
+        
         layer_index = random.randint(1, len(self.layers) - 2)
         layer = self.layers[layer_index]
 
-        if layer.weights.shape[1] <= min_layer_size or random.random() >= probability:
+        # If there are no hidden layers exit
+        if layer.weights.shape[1] <= min_layer_size:
             return
 
         neuron_index = random.randrange(layer.weights.shape[1])
@@ -114,21 +132,15 @@ class Network:
             layer = self.layers[i]
 
             layer.weights = resize_matrix(matrix=layer.weights, new_shape=(prev_output, current_output))
-            # np.random.uniform(
-            #     -1, 1, (prev_output, current_output)
-            # )
             layer.biases = resize_vector(vector=layer.biases, new_size=current_output)
-            # np.random.uniform(-1, 1, current_output)
-        
+
         output_layer = self.layers[-1]
         prev_output = self.layers[-2].weights.shape[1]
 
         output_layer.weights = resize_matrix(matrix=output_layer.weights, new_shape=(prev_output, 1))
-        # np.random.uniform(-1, 1, (prev_output, 1))
         output_layer.biases = resize_vector(vector=output_layer.biases, new_size=1)
         np.random.uniform(-1, 1, 1)
 
-    
     def predict(self, inputs):
         values = np.array(inputs)
 
