@@ -1,4 +1,4 @@
-import random, copy
+import random
 import numpy as np
 from utils.utils import *
 from modules.normalizer import Normalizer
@@ -63,6 +63,8 @@ for generation in range(1, max_generations + 1):
         best_model_validation_mae = best_model.evaluate(validation_dataset, uses_log_scaling = True)[0]
         print(f"    - Validation MAE (of best model): {best_model_validation_mae:,.10f}")
         print(f"    - Layer sizes of the best model: {best_model.get_layer_sizes()}")
+        print(f"    - Average neuron count: {np.mean([net.get_total_neurons() for net in population])}")
+        print(f"    - Average layer count: {np.mean([len(net.layers) for net in population])}")
     print()
 
     survivors = [network for network, log_mae, raw_mae in gen_performance[:survivors_count]]
@@ -73,7 +75,7 @@ for generation in range(1, max_generations + 1):
     # The non-survivors are ovverwritten by copies of new mutations of survivors
     for i in range(len(remaining)):
         parent = random.choice(survivors)
-        child = copy.deepcopy(parent)
+        child = parent.clone()
         child.mutate_genes(mutation_rate=mutation_rate, mutation_strength=mutation_strength, new_layer_rate=new_layer_rate, delete_layer_rate=delete_layer_rate, mutate_topology=generation < topology_mutation_treshold, min_layers_count=min_layers, min_layer_size=min_layer_size, max_layer_size=max_layer_size, max_neurons=max_neurons, max_layers_count=max_layers)
         remaining[i] = child
 
@@ -88,16 +90,6 @@ print(f"    - Log-scaled MAE: {validation_mae:,.10f}")
 best_model_genes = best_model.get_genes()
 layer_sizes = [len(features)] + best_model.get_layer_sizes()
 metrics = get_model_metrics(generation=last_gen, validation_mae=validation_mae, layer_sizes=layer_sizes, means=norm.means, stds=norm.stds)
-# metrics = {
-#     "timestamp": datetime.now().isoformat(timespec="seconds").replace(":", "-"), 
-#     "generation": last_gen,
-#     "MAE": validation_mae,
-#     "layer_sizes": ,
-#     "normalization": {
-#         "means": norm.means,
-#         "stds": norm.stds
-#     }
-# }
 
 model_name = get_model_name(model_name)
 save_model(best_model_genes, metrics, parameters, model_name)

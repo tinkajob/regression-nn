@@ -150,3 +150,9 @@ def split_dataset(norm, data_path, data_split_index, features, target):
     y_validate = np.log1p(validation_data[target[0]].values)
 
     return X_train, y_train, X_validate, y_validate
+
+def linear(x):
+    return x
+
+def leaky_relu(x):
+    return np.where(x > 0, x, x * 0.01)

@@ -1,7 +1,7 @@
 import random
 import numpy as np
 from .layer import Layer
-from utils.utils import resize_matrix, resize_vector
+from utils.utils import resize_matrix, resize_vector, linear, leaky_relu
 
 class Network:
     def __init__(self, layer_sizes):
@@ -183,10 +183,7 @@ class Network:
 
     def get_activation(self, is_ouput:bool = False):
         """Returns the correct activation function based on the rules we set."""
-        if is_ouput:
-            return lambda x:x # Linear for the output
-        else:
-            return lambda x: np.where(x > 0, x, x* 0.01) # Leaky ReLU for the hidden layers (NOT ReLU)
+        return linear if is_ouput else leaky_relu
         
     def mutate_genes(self, mutation_rate = 0.1, mutation_strength = 0.1, new_neuron_rate = 0.0, delete_neuron_rate = 0.0, new_layer_rate = 0.0, delete_layer_rate = 0.0, mutate_topology:bool = False, min_layers_count = 4, min_layer_size = 2, max_layer_size = 40, max_neurons = 128, max_layers_count = 8):
         """Mutate a given set of genes (weights and biases)."""
@@ -215,4 +212,19 @@ class Network:
         return [layer.weights.shape[1] for layer in self.layers]
 
     def get_total_neurons(self):
-        return sum(self.get_layer_sizes())
+        return sum(layer.weights.shape[1] for layer in self.layers)
+    
+    def clone(self):
+        net = Network.__new__(Network)
+        net.layers = []
+
+        for layer in self.layers:
+            new_layer = Layer.__new__(Layer)
+
+            new_layer.weights = layer.weights.copy()
+            new_layer.biases = layer.biases.copy()
+            new_layer.activation = layer.activation
+
+            net.layers.append(new_layer)
+
+        return net
