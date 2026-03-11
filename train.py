@@ -15,7 +15,6 @@ population = [Network(network_size) for _ in range(population_size)]
 
 print("================================\n      STARTING TRAINING\n================================\n")
 
-# Training loop
 for generation in range(1, max_generations + 1):
     if training_interrupted:
         break
@@ -27,7 +26,6 @@ for generation in range(1, max_generations + 1):
     gen_performance = []
     for child in population:
         try:
-            # This mae should be as low as possible
             log_mae, raw_mae = child.evaluate(training_batch, uses_log_scaling = True)
             gen_performance.append((child, log_mae, raw_mae))
         
@@ -54,25 +52,15 @@ for generation in range(1, max_generations + 1):
             print("MODEL EXCEEDED PATIENCE MAXIMUM!\nSTOPPING NOW")
             break
 
-    print(f"COMPLETED TRAINING GENERATION: {generation}")
-    print(f"    - Best MAE (dollars): {dollar_mae:,.2f}")
-    print(f"    - Best MAE (log-scaled): {log_scaled_mae:,.10f}")
-    print(f"    - Patience used: {gens_without_improvement}")
-    
-    if generation % 20 == 0:
-        best_model_validation_mae = best_model.evaluate(validation_dataset, uses_log_scaling = True)[0]
-        print(f"    - Validation MAE (of best model): {best_model_validation_mae:,.10f}")
-        print(f"    - Layer sizes of the best model: {best_model.get_layer_sizes()}")
-        print(f"    - Average neuron count: {np.mean([net.get_total_neurons() for net in population])}")
-        print(f"    - Average layer count: {np.mean([len(net.layers) for net in population])}")
-    print()
+    print_gen_info(gen=generation, raw_mae=dollar_mae, log_mae=log_scaled_mae, patience_used=gens_without_improvement)
+    print_additional_info(gen=generation, validation_mae=best_model.evaluate(validation_dataset, uses_log_scaling = True)[0], layer_sizes=best_model.get_layer_sizes(), avg_neurons=np.mean([net.get_total_neurons() for net in population]), avg_layers=np.mean([len(net.layers) for net in population]))
 
     survivors = [network for network, log_mae, raw_mae in gen_performance[:survivors_count]]
     remaining = [network for network, log_mae, raw_mae in gen_performance[elites_count:]]
 
     mutation_strength *= mutation_strength_decay
     mutation_strength = max(0.05, mutation_strength)
-    # The non-survivors are ovverwritten by copies of new mutations of survivors
+    # The non-survivors are ovverwritten by copies of survivors (which are then mutated)
     for i in range(len(remaining)):
         parent = random.choice(survivors)
         child = parent.clone()
@@ -81,11 +69,8 @@ for generation in range(1, max_generations + 1):
 
     population = survivors + remaining
 
-validation_mae, raw_validation_mae = best_model.evaluate(validation_dataset, uses_log_scaling = True)
-print("================================\n      VALIDATING MODEL\n================================\n")
-print(f"MODEL'S PERFORMANCE:")
-print(f"    - Dollars MAE: {raw_validation_mae:,.2f}")
-print(f"    - Log-scaled MAE: {validation_mae:,.10f}")
+validation_mae, raw_mae = best_model.evaluate(validation_dataset, uses_log_scaling = True)
+print_validation_info(validation_mae=validation_mae, raw_mae=raw_mae)
 
 best_model_genes = best_model.get_genes()
 layer_sizes = [len(features)] + best_model.get_layer_sizes()
