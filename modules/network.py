@@ -9,7 +9,7 @@ class Network:
 
         # We build layers (hidden have Leaky ReLU, last one is linear)
         for i in range(len(layer_sizes) - 1):
-            activation = ((lambda x: x) if i == len(layer_sizes) - 2 else lambda x: np.where(x > 0, x, x * 0.01))
+            activation = self.get_activation(i == len(layer_sizes) - 2)
             self.layers.append(Layer(activation=activation, input_size=layer_sizes[i], output_size=layer_sizes[i + 1]))
 
     def add_layer(self, probability:float = 0.0, max_neurons = 128, max_layers_count = 8, min_layer_size = 2):

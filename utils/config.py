@@ -39,6 +39,8 @@ min_layer_size = parameters["min_layer_size"]
 max_layers = parameters["max_layers"]
 min_layers = parameters["min_layers"]
 
+cpu_cores = parameters["cpu_cores"]
+
 best_model_score = 99999999999
 gens_without_improvement = 0
 last_gen = 0

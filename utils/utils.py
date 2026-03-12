@@ -163,16 +163,23 @@ def print_gen_info(gen, raw_mae, log_mae, patience_used):
     print(f"    - Best MAE (log-scaled): {log_mae:,.10f}")
     print(f"    - Patience used: {patience_used}")
 
-def print_additional_info(gen, validation_mae, layer_sizes, avg_neurons, avg_layers):
+def print_additional_info(gen, validation_mae, layer_sizes, avg_neurons, avg_layers, max_neurons, max_layers):
     if gen % 20 != 0:
         return
     print(f"    - Validation MAE (of best model): {validation_mae:,.10f}")
     print(f"    - Layer sizes of the best model: {layer_sizes}")
     print(f"    - Average neuron count: {avg_neurons}")
     print(f"    - Average layer count: {avg_layers}")
+    print(f"    - Max neurons: {max_neurons}")
+    print(f"    - Max layers: {max_layers}")
 
 def print_validation_info(validation_mae, raw_mae):
     print("================================\n      VALIDATING MODEL\n================================\n")
     print(f"MODEL'S PERFORMANCE:")
     print(f"    - Dollars MAE: {raw_mae:,.2f}")
     print(f"    - Log-scaled MAE: {validation_mae:,.10f}")
+
+def evaluate_child(args):
+    child, traning_batch = args
+    log_mae, raw_mae = child.evaluate(traning_batch, uses_log_scaling=True)
+    return (child, log_mae, raw_mae)
