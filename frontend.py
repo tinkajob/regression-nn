@@ -44,9 +44,6 @@ user_input = {
     "yr_renovated": int(input("Enter the year it was renovated (0 if it wasn't): "))
 }
 
-# build ordered + normalized input vector
-inputs = []
-
 # Normalizing the values with the same means and stds as during training
 user_input = normalize_input(user_input, parameters["features"], norm)
 
