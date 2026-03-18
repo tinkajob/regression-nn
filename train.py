@@ -55,7 +55,8 @@ for generation in range(1, max_generations + 1):
             break
 
     print_gen_info(gen=generation, raw_mae=dollar_mae, log_mae=log_scaled_mae, patience_used=gens_without_improvement)
-    print_additional_info(gen=generation, validation_mae=best_model.evaluate(validation_dataset, uses_log_scaling = True)[0], layer_sizes=best_model.get_layer_sizes(), avg_neurons=np.mean([net.get_total_neurons() for net in population]), avg_layers=np.mean([len(net.layers) for net in population]), max_neurons=max(n.get_total_neurons() for n in population), max_layers=max(len(n.layers) for n in population))
+    if generation % 20 == 0:
+        print_additional_info(gen=generation, validation_mae=best_model.evaluate(validation_dataset, uses_log_scaling = True)[0], layer_sizes=best_model.get_layer_sizes(), avg_neurons=np.mean([net.get_total_neurons() for net in population]), avg_layers=np.mean([len(net.layers) for net in population]), max_neurons=max(n.get_total_neurons() for n in population), max_layers=max(len(n.layers) for n in population))
 
     survivors = [network for network, log_mae, raw_mae in gen_performance[:survivors_count]]
     remaining = [network for network, log_mae, raw_mae in gen_performance[elites_count:]]
@@ -70,6 +71,9 @@ for generation in range(1, max_generations + 1):
         remaining[i] = child
 
     population = survivors + remaining
+    # Rebuild population every few generations
+    if generation % 50:
+        population = [net.clone() for net in population]
 
 validation_mae, raw_mae = best_model.evaluate(validation_dataset, uses_log_scaling = True)
 print_validation_info(validation_mae=validation_mae, raw_mae=raw_mae)

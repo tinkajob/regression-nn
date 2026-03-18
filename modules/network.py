@@ -127,19 +127,24 @@ class Network:
         """
         for i in range(1, len(self.layers) - 1):
             prev_output = self.layers[i - 1].weights.shape[1]
-            current_output = max(self.layers[i].weights.shape[1], min_layer_size)
-
+            # current_output = max(self.layers[i].weights.shape[1], min_layer_size)
             layer = self.layers[i]
 
-            layer.weights = resize_matrix(matrix=layer.weights, new_shape=(prev_output, current_output))
-            layer.biases = resize_vector(vector=layer.biases, new_size=current_output)
+            current_input, current_output = layer.weights.shape
+            target_output = max(current_output, min_layer_size)
+
+            if current_input != prev_output or current_output != target_output:
+                layer.weights = resize_matrix(matrix=layer.weights, new_shape=(prev_output, target_output))
+            if len(layer.biases) != target_output:
+                layer.biases = resize_vector(vector=layer.biases, new_size=target_output)
 
         output_layer = self.layers[-1]
         prev_output = self.layers[-2].weights.shape[1]
 
-        output_layer.weights = resize_matrix(matrix=output_layer.weights, new_shape=(prev_output, 1))
-        output_layer.biases = resize_vector(vector=output_layer.biases, new_size=1)
-        np.random.uniform(-1, 1, 1)
+        if output_layer.weights.shape != (prev_output, 1):
+            output_layer.weights = resize_matrix(matrix=output_layer.weights, new_shape=(prev_output, 1))
+        if len(output_layer.biases) != 1:
+            output_layer.biases = resize_vector(vector=output_layer.biases, new_size=1)
 
     def predict(self, inputs):
         values = np.array(inputs)

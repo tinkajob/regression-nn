@@ -92,27 +92,50 @@ def get_model_name(model_name:str = "") -> str:
     return f"model-{timestamp}"
 
 def resize_matrix(matrix, new_shape:tuple[int, int]):
+    # Don't resize if both shapes match
+    if matrix.shape == new_shape:
+        return matrix
+    
     old_rows, old_cols = matrix.shape
     new_rows, new_cols = new_shape
 
-    # Create a new blank matrix on new_size
+    # If rows changed
+    if old_cols != new_rows:
+        if new_rows > old_rows:
+            extra = np.random.unifrom(-1, 1, (new_rows - old_rows, new_cols))
+            return np.vstack((matrix, extra))
+        else:
+            return matrix[:,new_rows]
+    
+    if old_rows == new_rows:
+        if new_cols > old_cols:
+            extra = np.random.uniform(-1, 1, (new_rows, new_cols - old_cols))
+            return np.hstack((matrix, extra))
+        else:
+            return matrix[:, :new_cols]
+
+    # Fallback
     new_matrix = np.random.uniform(-1, 1, new_shape)
 
     rows = min(old_rows, new_rows)
     cols = min(old_cols, new_cols)
-    
+
     # Copy old matrix into the new one (as much as it fits)
     new_matrix[:rows, :cols] = matrix[:rows, :cols]
 
     return new_matrix
 
 def resize_vector(vector, new_size):
-    new_vector = np.random.uniform(-1, 1, new_size)
-
-    size = min(len(vector), new_size)
-    new_vector[:size] = vector[:size]
-
-    return new_vector
+    old_size = len(vector)
+    # Don't resize if lengths match
+    if old_size == new_size:
+        return vector
+    
+    if new_size > old_size:
+        extra = np.random.uniform(-1, 1, new_size - old_size)
+        return np.concatenate((vector, extra))
+    
+    return vector[:new_size]
 
 def get_model_metrics(generation, validation_mae, layer_sizes, means, stds):
     metrics = {
