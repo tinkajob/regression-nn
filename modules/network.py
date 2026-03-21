@@ -39,7 +39,6 @@ class Network:
         )
 
         self.layers.insert(insert_index + 1, new_layer)
-        self.repair_network(min_layer_size=min_layer_size)
 
     def remove_layer(self, min_layers_count:int = 4, probability:float = 0.0, min_layer_size=2):
         """Remove layer from random place in network based on the probability given. We only do that if there are enough hidden layers"""
@@ -61,7 +60,6 @@ class Network:
         )
 
         self.layers.pop(remove_index)
-        self.repair_network(min_layer_size=min_layer_size)
 
     def add_neuron(self, probability = 0.0, max_neurons = 128, max_layer_size = 40):
         # Don't add neurons if there are no hidden layers,
@@ -125,6 +123,9 @@ class Network:
         Ensures every layer's input size matches
         the previous layer's output size.
         """
+        if len(self.layers) <= 2:
+            return
+
         for i in range(1, len(self.layers) - 1):
             prev_output = self.layers[i - 1].weights.shape[1]
             # current_output = max(self.layers[i].weights.shape[1], min_layer_size)
@@ -193,16 +194,22 @@ class Network:
     def mutate_genes(self, mutation_rate = 0.1, mutation_strength = 0.1, new_neuron_rate = 0.0, delete_neuron_rate = 0.0, new_layer_rate = 0.0, delete_layer_rate = 0.0, mutate_topology:bool = False, min_layers_count = 4, min_layer_size = 2, max_layer_size = 40, max_neurons = 128, max_layers_count = 8):
         """Mutate a given set of genes (weights and biases)."""
         for layer in self.layers:
-            # We create a mask (so that we don't update all values, 
+            # Create a mask (so that we don't update all values, 
             # but approximately the percentage of all, given by mutation_rate)
             # If the random value is below treshold, it is set to True (1), otherwise False (0)
             weights_mask = np.random.rand(*layer.weights.shape) < mutation_rate
             biases_mask = np.random.rand(*layer.biases.shape) < mutation_rate
 
-            # We update the weights by adding original matrix and mutation changes matrix together
-            # Mutation changes matrix is matrix of random values (if they are to be updated) and zeroes (if they are to stay the same)
-            layer.weights += weights_mask * np.random.uniform(-mutation_strength, mutation_strength, layer.weights.shape)
-            layer.biases += biases_mask * np.random.uniform(-mutation_strength, mutation_strength, layer.biases.shape)
+            # Get indicies of elements which have 1 as their value
+            weights_indicies = np.where(weights_mask)
+            biases_indicies = np.where(biases_mask)
+            
+            # Update only elements that should be changed
+            if weights_indicies[0].shape[0] > 0:
+                layer.weights[weights_indicies] += np.random.uniform(-mutation_strength, mutation_strength, weights_indicies[0].shape[0])
+
+            if biases_indicies[0].shape[0] > 0:
+                layer.biases[biases_indicies] += np.random.uniform(-mutation_strength, mutation_strength, biases_indicies[0].shape[0])
 
         # Optionally we add/remove neurons/layers
         if mutate_topology:

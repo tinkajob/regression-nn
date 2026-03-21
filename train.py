@@ -1,4 +1,4 @@
-import random
+import random, gc
 import numpy as np
 import multiprocessing as mp
 from utils.utils import *
@@ -14,28 +14,30 @@ validation_dataset = (X_validate, y_validate)
 
 population = [Network(network_size) for _ in range(population_size)]
 
+context = mp.get_context("fork")
+processes = min(mp.cpu_count(), cpu_cores)
+pool = context.Pool(processes=processes)
+
 print("================================\n      STARTING TRAINING\n================================\n")
 
 for generation in range(1, max_generations + 1):
     if training_interrupted:
         break
     
+    start = time.perf_counter()
+    
     # Create a mini batch of data (to prevent memorization and speed up training)
     indices = np.random.choice(len(X_train), batch_size, replace=False) # Select random rows from dataset
     training_batch = (X_train[indices], y_train[indices])
 
-    context = mp.get_context("fork")
-    processes = min(mp.cpu_count(), cpu_cores)
-
-    with context.Pool(processes=processes) as pool:
-        try:
-            gen_performance = list(pool.imap_unordered(evaluate_child, [(child, training_batch) for child in population]))
-        except KeyboardInterrupt:
-            print("KEYBOARD INTERRUPT!")
-            print("Exiting and saving the best model!")
-            training_interrupted = True
-            pool.terminate()
-            pool.join()
+    try:
+        gen_performance = list(pool.imap_unordered(evaluate_child, [(child, training_batch) for child in population]))
+    except KeyboardInterrupt:
+        print("KEYBOARD INTERRUPT!")
+        print("Exiting and saving the best model!")
+        training_interrupted = True
+        pool.terminate()
+        pool.join()
 
     # After we have finished training a generation, we sort networks by their performance
     gen_performance.sort(key = lambda x:x[sort_key])
@@ -53,10 +55,12 @@ for generation in range(1, max_generations + 1):
         if gens_without_improvement >= patience:
             print("MODEL EXCEEDED PATIENCE MAXIMUM!\nSTOPPING NOW")
             break
-
+    
+    end = time.perf_counter()
     print_gen_info(gen=generation, raw_mae=dollar_mae, log_mae=log_scaled_mae, patience_used=gens_without_improvement)
     if generation % 20 == 0:
         print_additional_info(gen=generation, validation_mae=best_model.evaluate(validation_dataset, uses_log_scaling = True)[0], layer_sizes=best_model.get_layer_sizes(), avg_neurons=np.mean([net.get_total_neurons() for net in population]), avg_layers=np.mean([len(net.layers) for net in population]), max_neurons=max(n.get_total_neurons() for n in population), max_layers=max(len(n.layers) for n in population))
+        print(f"[TIMER]: {end - start:.4f}s")
 
     survivors = [network for network, log_mae, raw_mae in gen_performance[:survivors_count]]
     remaining = [network for network, log_mae, raw_mae in gen_performance[elites_count:]]
@@ -72,8 +76,9 @@ for generation in range(1, max_generations + 1):
 
     population = survivors + remaining
     # Rebuild population every few generations
-    if generation % 50:
+    if generation % 50 == 0:
         population = [net.clone() for net in population]
+        gc.collect()
 
 validation_mae, raw_mae = best_model.evaluate(validation_dataset, uses_log_scaling = True)
 print_validation_info(validation_mae=validation_mae, raw_mae=raw_mae)

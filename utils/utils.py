@@ -1,4 +1,4 @@
-import json, os, argparse, sys, pandas
+import json, os, argparse, sys, pandas, time
 import numpy as np
 from modules.normalizer import Normalizer
 from datetime import datetime
@@ -100,13 +100,14 @@ def resize_matrix(matrix, new_shape:tuple[int, int]):
     new_rows, new_cols = new_shape
 
     # If rows changed
-    if old_cols != new_rows:
+    if old_cols == new_cols:
         if new_rows > old_rows:
-            extra = np.random.unifrom(-1, 1, (new_rows - old_rows, new_cols))
+            extra = np.random.uniform(-1, 1, (new_rows - old_rows, new_cols))
             return np.vstack((matrix, extra))
         else:
-            return matrix[:,new_rows]
-    
+            return matrix[:new_rows, :]
+
+    # If columns changed
     if old_rows == new_rows:
         if new_cols > old_cols:
             extra = np.random.uniform(-1, 1, (new_rows, new_cols - old_cols))
@@ -114,19 +115,19 @@ def resize_matrix(matrix, new_shape:tuple[int, int]):
         else:
             return matrix[:, :new_cols]
 
-    # Fallback
+    # Both changed
     new_matrix = np.random.uniform(-1, 1, new_shape)
 
     rows = min(old_rows, new_rows)
     cols = min(old_cols, new_cols)
 
-    # Copy old matrix into the new one (as much as it fits)
     new_matrix[:rows, :cols] = matrix[:rows, :cols]
 
     return new_matrix
 
 def resize_vector(vector, new_size):
     old_size = len(vector)
+    
     # Don't resize if lengths match
     if old_size == new_size:
         return vector
@@ -206,3 +207,12 @@ def evaluate_child(args):
     child, traning_batch = args
     log_mae, raw_mae = child.evaluate(traning_batch, uses_log_scaling=True)
     return (child, log_mae, raw_mae)
+
+def timer(func):
+    def wrapper(*args, **kwargs):
+        start = time.perf_counter()
+        result = func(*args, **kwargs)
+        end = time.perf_counter()
+        print(f"[TIMER] {func.__name__}: {end - start:.4f}s")
+        return result
+    return wrapper
