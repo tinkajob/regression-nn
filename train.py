@@ -59,8 +59,7 @@ for generation in range(1, max_generations + 1):
     end = time.perf_counter()
     print_gen_info(gen=generation, raw_mae=dollar_mae, log_mae=log_scaled_mae, patience_used=gens_without_improvement)
     if generation % 20 == 0:
-        print_additional_info(gen=generation, validation_mae=best_model.evaluate(validation_dataset, uses_log_scaling = True)[0], layer_sizes=best_model.get_layer_sizes(), avg_neurons=np.mean([net.get_total_neurons() for net in population]), avg_layers=np.mean([len(net.layers) for net in population]), max_neurons=max(n.get_total_neurons() for n in population), max_layers=max(len(n.layers) for n in population))
-        print(f"[TIMER]: {end - start:.4f}s")
+        print_additional_info(gen=generation, validation_mae=best_model.evaluate(validation_dataset, uses_log_scaling = True)[0], layer_sizes=best_model.get_layer_sizes(), avg_neurons=np.mean([net.get_total_neurons() for net in population]), avg_layers=np.mean([len(net.layers) for net in population]), max_neurons=max(n.get_total_neurons() for n in population), max_layers=max(len(n.layers) for n in population), time = end - start)
 
     survivors = [network for network, log_mae, raw_mae in gen_performance[:survivors_count]]
     remaining = [network for network, log_mae, raw_mae in gen_performance[elites_count:]]
