@@ -16,7 +16,7 @@ population = [Network(network_size) for _ in range(population_size)]
 
 context = mp.get_context("fork")
 processes = min(mp.cpu_count(), cpu_cores)
-pool = context.Pool(processes=processes)
+pool = context.Pool(processes=processes, maxtasksperchild=50)
 
 print("================================\n      STARTING TRAINING\n================================\n")
 

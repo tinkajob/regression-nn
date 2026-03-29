@@ -123,7 +123,7 @@ def resize_matrix(matrix, new_shape:tuple[int, int]):
 
     new_matrix[:rows, :cols] = matrix[:rows, :cols]
 
-    return new_matrix
+    return np.ascontiguousarray(new_matrix)
 
 def resize_vector(vector, new_size):
     old_size = len(vector)

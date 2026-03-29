@@ -218,6 +218,10 @@ class Network:
             self.add_neuron(probability=new_neuron_rate, max_layer_size=max_layer_size, max_neurons=max_neurons)
             self.remove_neuron(probability=delete_neuron_rate, min_layer_size=min_layer_size)
             self.repair_network(min_layer_size=min_layer_size)
+
+        for layer in self.layers:
+            layer.weights = np.ascontiguousarray(layer.weights)
+            layer.biases = np.ascontiguousarray(layer.biases)
     
     def get_layer_sizes(self):
         """Returns a list with sizes of each layer of the network."""
@@ -233,8 +237,8 @@ class Network:
         for layer in self.layers:
             new_layer = Layer.__new__(Layer)
 
-            new_layer.weights = layer.weights.copy()
-            new_layer.biases = layer.biases.copy()
+            new_layer.weights = np.ascontiguousarray(layer.weights.copy())
+            new_layer.biases = np.ascontiguousarray(layer.biases.copy())
             new_layer.activation = layer.activation
 
             net.layers.append(new_layer)
