@@ -217,3 +217,19 @@ def timer(func):
         print(f"[TIMER] {func.__name__}: {end - start:.4f}s")
         return result
     return wrapper
+
+def worker_loop(networks, task_queue, result_queue):
+    while True:
+        task = task_queue.get()
+
+        if task is None:
+            break
+
+        batch = task
+
+        results = []
+        for net in networks:
+            log_mae, raw_mae = net.evaluate(batch, uses_log_scaling=True)
+            results.append((log_mae, raw_mae))
+
+        result_queue.put(results)
