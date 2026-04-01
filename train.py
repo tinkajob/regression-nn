@@ -17,18 +17,18 @@ def main():
 
     population = [Network(network_size) for _ in range(population_size)]
 
-    num_workers = min(mp.cpu_count(), cpu_cores)
+    num_workers = min(mp.cpu_count(), cpu_cores, len(population))
     
 
     task_queues = [mp.Queue() for _ in range(num_workers)]
     result_queue = mp.Queue()
 
     # Split population into chunks
-    network_chunks = np.array_split(population, num_workers)
+    network_chunks = np.array_split(np.array(population, dtype=object), num_workers)
     network_chunks = [list(chunk) for chunk in network_chunks]
 
     workers = [
-        mp.Process(target=worker_loop, args=(network_chunks[i], task_queues[i], result_queue))
+        mp.Process(target=worker_loop, args=(i, network_chunks[i], task_queues[i], result_queue))
         for i in range(num_workers)
     ]
 
@@ -54,12 +54,13 @@ def main():
 
             gen_performance = []
 
-            # Collect results
-            for i in range(num_workers):
-                worker_results = result_queue.get()
+            for _ in range(num_workers):
+                worker_id, worker_results = result_queue.get()
+
+                chunk = network_chunks[worker_id]
 
                 for j, (log_mae, raw_mae) in enumerate(worker_results):
-                    net = network_chunks[i][j]
+                    net = chunk[j]
                     gen_performance.append((net, log_mae, raw_mae))
 
         except KeyboardInterrupt:

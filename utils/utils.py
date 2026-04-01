@@ -218,7 +218,7 @@ def timer(func):
         return result
     return wrapper
 
-def worker_loop(networks, task_queue, result_queue):
+def worker_loop(worker_id, networks, task_queue, result_queue):
     while True:
         task = task_queue.get()
 
@@ -232,4 +232,4 @@ def worker_loop(networks, task_queue, result_queue):
             log_mae, raw_mae = net.evaluate(batch, uses_log_scaling=True)
             results.append((log_mae, raw_mae))
 
-        result_queue.put(results)
+        result_queue.put((worker_id, results))
