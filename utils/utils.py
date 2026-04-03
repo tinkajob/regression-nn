@@ -218,18 +218,27 @@ def timer(func):
         return result
     return wrapper
 
-def worker_loop(worker_id, networks, task_queue, result_queue):
+def worker_loop(worker_id, task_queue, result_queue):
+    global population
+    
     while True:
         task = task_queue.get()
 
         if task is None:
             break
 
-        batch = task
+        if task["type"] == "init":
+            population = task["population"]
+            continue
+        
+        if task["type"] == "eval":
+            indicies = task["indicies"]
+            X, y = task["batch"]
 
-        results = []
-        for net in networks:
-            log_mae, raw_mae = net.evaluate(batch, uses_log_scaling=True)
-            results.append((log_mae, raw_mae))
+            results = []
+            for index in indicies:
+                net = population[index]
+                log_mae, raw_mae = net.evaluate((X, y), uses_log_scaling=True)
+                results.append((index, log_mae, raw_mae))
 
-        result_queue.put((worker_id, results))
+            result_queue.put(results)

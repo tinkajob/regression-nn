@@ -12,14 +12,12 @@ def main():
     norm = Normalizer()
 
     X_train, y_train, X_validate, y_validate = split_dataset(norm=norm, data_path=data_path, data_split_index=data_split_index, features=features, target=target)
-    training_dataset = (X_train, y_train)
     validation_dataset = (X_validate, y_validate)
 
     population = [Network(network_size) for _ in range(population_size)]
 
     num_workers = min(mp.cpu_count(), cpu_cores, len(population))
     
-
     task_queues = [mp.Queue() for _ in range(num_workers)]
     result_queue = mp.Queue()
 
@@ -28,12 +26,15 @@ def main():
     network_chunks = [list(chunk) for chunk in network_chunks]
 
     workers = [
-        mp.Process(target=worker_loop, args=(i, network_chunks[i], task_queues[i], result_queue))
+        mp.Process(target=worker_loop, args=(i, task_queues[i], result_queue))
         for i in range(num_workers)
     ]
 
     for w in workers:
         w.start()
+
+    for q in task_queues:
+        q.put({"type": "init", "population": population})
 
     print("================================\n      STARTING TRAINING\n================================\n")
 
@@ -47,27 +48,26 @@ def main():
         indices = np.random.choice(len(X_train), batch_size, replace=False) # Select random rows from dataset
         training_batch = (X_train[indices], y_train[indices])
 
+        indicies = [[int(i) for i in chunk.tolist()] for chunk in np.array_split(np.arange(len(population)), num_workers)]
+
         try:
             # Send batch to all workers
-            for q in task_queues:
-                q.put(training_batch)
+            for i, q in enumerate(task_queues):
+                q.put({"type": "eval", "indicies": indicies[i], "batch": training_batch})
 
             gen_performance = []
 
             for _ in range(num_workers):
-                worker_id, worker_results = result_queue.get()
+                worker_results = result_queue.get()
 
-                chunk = network_chunks[worker_id]
-
-                for j, (log_mae, raw_mae) in enumerate(worker_results):
-                    net = chunk[j]
+                for idx, log_mae, raw_mae in worker_results:
+                    net = population[idx]
                     gen_performance.append((net, log_mae, raw_mae))
 
         except KeyboardInterrupt:
             print("KEYBOARD INTERRUPT!")
             print("Exiting and saving the best model!")
             training_interrupted = True
-
 
         # After we have finished training a generation, we sort networks by their performance
         gen_performance.sort(key = lambda x:x[sort_key])
@@ -91,8 +91,8 @@ def main():
         if generation % 20 == 0:
             print_additional_info(gen=generation, validation_mae=best_model.evaluate(validation_dataset, uses_log_scaling = True)[0], layer_sizes=best_model.get_layer_sizes(), avg_neurons=np.mean([net.get_total_neurons() for net in population]), avg_layers=np.mean([len(net.layers) for net in population]), max_neurons=max(n.get_total_neurons() for n in population), max_layers=max(len(n.layers) for n in population), time = end - start)
 
-        survivors = [network for network, log_mae, raw_mae in gen_performance[:survivors_count]]
-        remaining = [network for network, log_mae, raw_mae in gen_performance[elites_count:]]
+        survivors = [network for network, _, _ in gen_performance[:survivors_count]]
+        remaining = [network for network, _, _ in gen_performance[elites_count:]]
 
         mutation_strength *= mutation_strength_decay
         mutation_strength = max(0.05, mutation_strength)
@@ -104,15 +104,16 @@ def main():
             child.mutate_genes(mutation_rate=mutation_rate, mutation_strength=mutation_strength, new_layer_rate=new_layer_rate, delete_layer_rate=delete_layer_rate, mutate_topology=generation < topology_mutation_treshold, min_layers_count=min_layers, min_layer_size=min_layer_size, max_layer_size=max_layer_size, max_neurons=max_neurons, max_layers_count=max_layers)
             remaining[i] = child
 
-        new_population = survivors + remaining
+        population = survivors + remaining
 
         idx = 0
         for w_idx, chunk in enumerate(network_chunks):
             for l_idx in range(len(chunk)):
-                chunk[l_idx] = new_population[idx]
+                chunk[l_idx] = population[idx]
                 idx += 1
 
-        population = new_population
+        for q in task_queues:
+            q.put({"type": "init", "population": population})
 
         # Rebuild population every few generations
         if generation % 50 == 0:
@@ -136,5 +137,5 @@ def main():
     save_model(best_model_genes, metrics, parameters, model_name)
 
 if __name__ == "__main__":
-    mp.freeze_support()  # optional but recommended on Windows
+    mp.freeze_support()  # Optional but recommended on Windows
     main()

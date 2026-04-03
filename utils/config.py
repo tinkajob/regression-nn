@@ -4,7 +4,7 @@ from utils.utils import parse_args, load_json
 args = parse_args()
 model_name = args.model_name
 
-data_path = "houses.csv"
+data_path = "dataset.csv"
 
 parameters = load_json(path=os.path.join("parameters.json"))
 
