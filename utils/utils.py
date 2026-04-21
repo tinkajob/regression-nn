@@ -155,7 +155,7 @@ def split_dataset(norm, data_path, data_split_index, features, target):
     # We load the dataset, then we clean it
     df = pandas.read_csv(data_path)
     df = df.dropna()
-    df = df[df["price"] > 0]
+    df = df[df[target[0]] > 0]
 
     split_idx = int(len(df) * data_split_index)
     training_data = df[:split_idx]
@@ -183,7 +183,7 @@ def leaky_relu(x):
 
 def print_gen_info(gen, raw_mae, log_mae, patience_used):
     print(f"\nCOMPLETED TRAINING GENERATION: {gen}")
-    print(f"    - Best MAE (dollars): {raw_mae:,.2f}")
+    print(f"    - Best MAE (raw): {raw_mae:,.5f}")
     print(f"    - Best MAE (log-scaled): {log_mae:,.10f}")
     print(f"    - Patience used: {patience_used}")
 
@@ -201,7 +201,7 @@ def print_additional_info(gen, validation_mae, layer_sizes, avg_neurons, avg_lay
 def print_validation_info(validation_mae, raw_mae):
     print("================================\n      VALIDATING MODEL\n================================\n")
     print(f"MODEL'S PERFORMANCE:")
-    print(f"    - Dollars MAE: {raw_mae:,.2f}")
+    print(f"    - Raw MAE: {raw_mae:,.5f}")
     print(f"    - Log-scaled MAE: {validation_mae:,.10f}")
 
 def evaluate_child(args):
