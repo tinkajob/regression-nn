@@ -4,9 +4,15 @@ from utils.utils import parse_args, load_json
 args = parse_args()
 model_name = args.model_name
 
-data_path = "dataset.csv"
-
+# Depending on which data is chosen
 parameters = load_json(path=os.path.join("parameters.json"))
+
+dataset = parameters["dataset"]
+data_path = os.path.join("datasets", dataset, "dataset.csv")
+
+# Override with dataset-specific parameters
+if os.path.exists(os.path.join("datasets", dataset, "parameters.json")):
+    parameters = load_json(path=os.path.join("datasets", dataset, "parameters.json"))
 
 network_size = parameters["network_size"]
 population_size = parameters["population_size"]
