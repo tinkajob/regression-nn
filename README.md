@@ -14,9 +14,7 @@ The model evolves a population of neural networks over generations, gradually im
 # Dataset Format
 Prepare a CSV dataset with named columns, eg.:
 ```
-price, bedrooms, bathrooms, sqft_living, sqft_lot, floors,
-waterfront, view, condition, sqft_above, sqft_basement,
-yr_built, yr_renovated
+target, feature1, feature2, feature3, feature4, ...
 ```
 You can also modify the **feature list** in `parameters.json`.
 
