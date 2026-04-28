@@ -1,6 +1,6 @@
 # Regression Neural Network
 
-A neural network project for **predicting house prices** using an **evolutionary training algorithm** instead of traditional gradient-based methods.
+A neural network project for **regression tasks** using an **evolutionary training algorithm** instead of traditional gradient-based methods.
 The model evolves a population of neural networks over generations, gradually improving prediction accuracy.
 
 # Features
@@ -25,13 +25,17 @@ You can also modify the **feature list** in `parameters.json`.
 Create a CSV file containing features and target columns.
 
 ### 2. Configure Training
-Edit the `parameters.json` file (in the same folder as `dataset.csv`) to define the training configuration. In `def_parameters.json` file, which is in root folder, specify which dataset to train model on (name of the folder inside `datasets`, containing `dataset.csv` and `parameters.json`).
+This project uses **2 config files**:
+- `def_parameters.json`: defines which dataset to use *(`"dataset": dataset_name`)* and provides fallback parameters
+- `datasets/{dataset_name}/parameters.json`: dataset-specific parameters (these replace default ones).
+
+For more info about configuration see *Configuration* section.
 
 ### 3. Train the Model
 ```
 python train.py
 ```
-During training, the evolutionary algorithm will generate new networks and improve them over generations.
+During training, the evolutionary algorithm evolves a population of networks over multiple generations, improving performance over time.
 
 ### 4. Evaluate Performance
 After training, the program reports the **Mean Absolute Error (MAE)**:
@@ -57,6 +61,7 @@ Enter feature values to receive a target prediction.
 6. The process repeats for multiple **generations**, improving performance over time.
 
 # Configuration (`parameters.json`)
+This section explains each parameter and its usage in config files. Note that `def_parameters.json` must contain additional parameter `dataset`, which specifies dataset to be used. `def_parameters.json` does not need to include other parameters, provided they're specified in `parameters.json`.
 ### Network Structure
 | Parameter | Description |
 |----------|-------------|
@@ -108,6 +113,43 @@ The model reports **Mean Absolute Error (MAE)**:
 MAE = average(|predicted_target - actual_target|)
 ```
 Lower values indicate better predictions.
+
+# Project Structure
+```
+project-root/
+│
+├── datasets/                  # Available datasets
+│   ├── example1/
+│   │   ├── dataset.csv        # Data file
+│   │   └── parameters.json    # Dataset-specific config
+│   ├── example2/
+│   │   ├── dataset.csv
+│   │   └── parameters.json
+│
+├── models/                    # Trained models
+│   ├── example1/
+│   │   ├── genes.json         # Network weights/topology
+│   │   ├── metrics.json       # Training results
+│   │   └── parameters.json    # Config used for training
+│   └── example2/
+│       ├── genes.json
+│       ├── metrics.json
+│       └── parameters.json
+│
+├── modules/                   # Core neural network implementation
+│   ├── layer.py
+│   ├── network.py
+│   └── normalizer.py
+│
+├── utils/                     # Helper utilities
+│   ├── config.py
+│   └── utils.py
+│
+├── def_parameters.json        # Global config (selects dataset)
+├── train.py                   # Training script
+├── frontend.py                # Prediction interface
+└── README.md
+```
 
 # Notes
 - Feature values are **normalized automatically**
