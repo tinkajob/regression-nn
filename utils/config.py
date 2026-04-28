@@ -5,7 +5,7 @@ args = parse_args()
 model_name = args.model_name
 
 # Depending on which data is chosen
-parameters = load_json(path=os.path.join("parameters.json"))
+parameters = load_json(path=os.path.join("def_parameters.json"))
 
 dataset = parameters["dataset"]
 data_path = os.path.join("datasets", dataset, "dataset.csv")
