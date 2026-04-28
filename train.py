@@ -137,5 +137,5 @@ def main():
     save_model(best_model_genes, metrics, parameters, model_name)
 
 if __name__ == "__main__":
-    mp.freeze_support()  # Optional but recommended on Windows
+    mp.freeze_support()
     main()

@@ -25,24 +25,14 @@ norm.means = metrics["normalization"]["means"]
 norm.stds = metrics["normalization"]["stds"]
 
 min_layer_size = parameters["min_layer_size"]
+features = parameters["features"]
 
 model = Network(layer_sizes)
 model.set_genes(genes, min_layer_size=min_layer_size)
 
-user_input = {
-    "bedrooms": int(input("Enter the number of bedrooms: ")),
-    "bathrooms": float(input("Enter the number of bathrooms: ")),
-    "sqft_living": int(input("Enter the square feet of house: ")),
-    "sqft_lot": int(input("Enter the square feet of the lot: ")),
-    "floors": float(input("Enter the number of floors: ")),
-    "waterfront": int(input("Does the house have a waterfront (0 or 1): ")),
-    "view": float(input("Enter the number of the view (0-4): ")),
-    "condition": float(input("Enter the number of the condition (0-5): ")),
-    "sqft_above": int(input("Enter the number of the square feet above: ")),
-    "sqft_basement": int(input("Enter the number of the square feet of the basement: ")),
-    "yr_built": int(input("Enter the year it was built: ")),
-    "yr_renovated": int(input("Enter the year it was renovated (0 if it wasn't): "))
-}
+user_input = {}
+for feature in features:
+    user_input[feature] = float(input(f"{feature}: "))
 
 # Normalizing the values with the same means and stds as during training
 user_input = normalize_input(user_input, parameters["features"], norm)
@@ -51,5 +41,5 @@ prediction = model.predict(user_input)
 prediction_value = float(np.squeeze(prediction))
 
 print("\n==========================================")
-print(f"Model's prediction: {np.expm1(prediction_value):,.2f}$ ({prediction_value})")
+print(f"Model's prediction: {np.expm1(prediction_value):,.2f} ({prediction_value:,.6f})")
 print("==========================================")
