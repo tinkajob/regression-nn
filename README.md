@@ -1,19 +1,18 @@
-# Price Prediction AI
+# Regression Neural Network
 
 A neural network project for **predicting house prices** using an **evolutionary training algorithm** instead of traditional gradient-based methods.
 The model evolves a population of neural networks over generations, gradually improving prediction accuracy.
 
 # Features
-- Predicts **house prices** using various property features
+- Predicts **target** using various features
 - **Evolutionary algorithm** for network optimization
 - Adjustable **mutation rate and mutation strength**
 - **Topology mutations** (adding/removing layers and neurons)
 - Supports **parallel training across CPU cores**
 - Uses **NumPy matrix operations** for efficient batch predictions
-- Reports **Mean Absolute Error (MAE) in real dollars**
 
 # Dataset Format
-Prepare a CSV dataset with the following columns:
+Prepare a CSV dataset with named columns, eg.:
 ```
 price, bedrooms, bathrooms, sqft_living, sqft_lot, floors,
 waterfront, view, condition, sqft_above, sqft_basement,
@@ -23,10 +22,10 @@ You can also modify the **feature list** in `parameters.json`.
 
 # Usage
 ### 1. Prepare the Dataset
-Create a CSV file containing house features and prices.
+Create a CSV file containing features and target columns.
 
 ### 2. Configure Training
-Edit the `parameters.json` file to define the training configuration.
+Edit the `parameters.json` file (in the same folder as `dataset.csv`) to define the training configuration. In `def_parameters.json` file, which is in root folder, specify which dataset to train model on (name of the folder inside `datasets`, containing `dataset.csv` and `parameters.json`).
 
 ### 3. Train the Model
 ```
@@ -37,18 +36,18 @@ During training, the evolutionary algorithm will generate new networks and impro
 ### 4. Evaluate Performance
 After training, the program reports the **Mean Absolute Error (MAE)**:
 ```
-Mean Absolute Error: $18,432
+Mean Absolute Error: 18,432
 ```
 
 ### 5. Predict Prices
 ```
 python frontend.py
 ```
-Enter house features to receive a price prediction.
+Enter feature values to receive a target prediction.
 
 # How It Works
 1. A **population of neural networks** is initialized.
-2. Each network predicts house prices.
+2. Each network predicts target prices.
 3. Networks are evaluated using **Mean Absolute Error (MAE)**.
 4. The best-performing networks **survive and reproduce**.
 5. Offspring networks are created through **mutation**:
@@ -101,12 +100,12 @@ Enter house features to receive a price prediction.
 |----------|-------------|
 | `target` | Column to predict |
 | `features` | List of input features |
-| `sort_key` | 1 = log-scaled MAE, 2 = raw MAE in dollars |
+| `sort_key` | 1 = log-scaled MAE, 2 = raw MAE |
 
 # Output Metrics
 The model reports **Mean Absolute Error (MAE)**:
 ```
-MAE = average(|predicted_price - actual_price|)
+MAE = average(|predicted_target - actual_target|)
 ```
 Lower values indicate better predictions.
 
